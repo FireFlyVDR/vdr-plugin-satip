@@ -222,7 +222,8 @@ bool cSatipDevice::SignalStats(int &Valid, double *Strength, double *Cnr, double
   Valid = DTV_STAT_VALID_NONE;
   if (Strength && pTunerM) {
      *Strength =  pTunerM->SignalStrengthDBm();
-     Valid |= DTV_STAT_VALID_STRENGTH;
+     if (*Strength < -18.0) /* valid: -71.458 .. -18.541, invalid: 0.0 */
+        Valid |= DTV_STAT_VALID_STRENGTH;
      }
   if (Status) {
      *Status = HasLock() ? (DTV_STAT_HAS_SIGNAL | DTV_STAT_HAS_CARRIER | DTV_STAT_HAS_VITERBI | DTV_STAT_HAS_SYNC | DTV_STAT_HAS_LOCK) : DTV_STAT_HAS_NONE;
@@ -362,7 +363,6 @@ bool cSatipDevice::SetChannelDevice(const cChannel *channelP, bool liveViewP)
         error("Unrecognized channel parameters: %s [device %u]", channelP->Parameters(), deviceIndexM);
         return false;
         }
-     cString address;
      cSatipServer *server = cSatipDiscover::GetInstance()->AssignServer(deviceIndexM, channelP->Source(), channelP->Transponder(), dtp.System());
      if (!server) {
         debug9("%s No suitable server found [device %u]", __PRETTY_FUNCTION__, deviceIndexM);

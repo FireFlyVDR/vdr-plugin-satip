@@ -18,7 +18,6 @@
 class cSatipDevice : public cDevice, public cSatipPidStatistics, public cSatipBufferStatistics, public cSatipDeviceIf {
   // static ones
 public:
-  static cMutex mutexS;
   static bool Initialize(unsigned int DeviceCount);
   static void Shutdown(void);
   static unsigned int Count(void);
@@ -45,6 +44,7 @@ private:
 
   // constructor & destructor
 public:
+  static cMutex mutexS;
   explicit cSatipDevice(unsigned int deviceIndexP);
   virtual ~cSatipDevice();
   cString GetInformation(unsigned int pageP = SATIP_DEVICE_INFO_ALL);
