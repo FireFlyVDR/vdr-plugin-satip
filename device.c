@@ -109,14 +109,16 @@ cString cSatipDevice::GetSatipStatus(void)
          bool live = (device == cDevice::ActualDevice());
          bool lock = device->HasLock();
          const cChannel *channel = device->GetCurrentlyTunedTransponder();
-         LOCK_TIMERS_READ;
-         for (const cTimer *timer = Timers->First(); timer; timer = Timers->Next(timer)) {
-             if (timer->Recording()) {
-                cRecordControl *control = cRecordControls::GetRecordControl(timer);
-                if (control && control->Device() == device)
-                   timers++;
+	 {
+             LOCK_TIMERS_READ;
+             for (const cTimer *timer = Timers->First(); timer; timer = Timers->Next(timer)) {
+                 if (timer->Recording()) {
+                    cRecordControl *control = cRecordControls::GetRecordControl(timer);
+                    if (control && control->Device() == device)
+                       timers++;
+                    }
                 }
-            }
+	 }
          info = cString::sprintf("%sDevice: %s\n", *info, *device->DeviceName());
          if (lock)
             info = cString::sprintf("%sCardIndex: %d  HasLock: yes  Strength: %d  Quality: %d%s\n", *info, device->CardIndex(), device->SignalStrength(), device->SignalQuality(), live ? "  Live: yes" : "");
