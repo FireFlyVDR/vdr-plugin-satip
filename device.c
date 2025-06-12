@@ -24,6 +24,7 @@ cSatipDevice::cSatipDevice(unsigned int indexP)
   checkTsBufferM(false),
   deviceNameM(*cString::sprintf("%s %d", *DeviceType(), deviceIndexM)),
   channelM(),
+  pTunerM(NULL),
   createdM(0),
   tunedM()
 {
@@ -359,7 +360,7 @@ bool cSatipDevice::SetChannelDevice(const cChannel *channelP, bool liveViewP)
   if (channelP) {
      cDvbTransponderParameters dtp(channelP->Parameters());
      cString params = GetTransponderUrlParameters(channelP);
-     if (isempty(params)) {
+     if (isempty(*params)) {
         error("Unrecognized channel parameters: %s [device %u]", channelP->Parameters(), deviceIndexM);
         return false;
         }
