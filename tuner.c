@@ -501,7 +501,7 @@ bool cSatipTuner::UpdatePids(bool forceP)
   debug16("%s (%d) tunerState=%s [device %d]", __PRETTY_FUNCTION__, forceP, TunerStateString(currentStateM), deviceIdM);
   cMutexLock MutexLock(&mutexM);
   if (((forceP && pidsM.Size()) || (pidUpdateCacheM.TimedOut() && (addPidsM.Size() || delPidsM.Size()))) &&
-      !isempty(*streamAddrM) && (streamIdM > 0)) {
+      !isempty(*streamAddrM) && (streamIdM >= 0)) {
      cString uri = cString::sprintf("%sstream=%d", *GetBaseUrl(*streamAddrM, streamPortM), streamIdM);
      bool useci = (SatipConfig.GetCIExtension() && currentServerM.HasCI());
      bool usedummy = currentServerM.IsQuirk(cSatipServer::eSatipQuirkPlayPids);
@@ -603,7 +603,7 @@ bool cSatipTuner::ReadReceptionStatus(bool forceP)
      statusUpdateM.Set(eStatusUpdateTimeoutMs);
      forceP = true;
      }
-  if (forceP && !isempty(*streamAddrM) && (streamIdM > 0)) {
+  if (forceP && !isempty(*streamAddrM) && (streamIdM >= 0)) {
      cString uri = cString::sprintf("%sstream=%d", *GetBaseUrl(*streamAddrM, streamPortM), streamIdM);
      if (rtspM.Describe(*uri))
         return true;
