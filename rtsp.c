@@ -27,7 +27,6 @@ cSatipRtsp::cSatipRtsp(cSatipTunerIf &tunerP)
   interleavedRtcpIdM(1)
 {
   debug1("%s [device %d]", __PRETTY_FUNCTION__, tunerM.GetId());
-  Create();
 }
 
 cSatipRtsp::~cSatipRtsp()

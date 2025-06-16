@@ -41,8 +41,6 @@ private:
   unsigned int interleavedRtpIdM;
   unsigned int interleavedRtcpIdM;
 
-  void Create(void);
-  void Destroy(void);
   void ParseHeader(void);
   void ParseData(void);
   bool ValidateLatestResponse(long *rcP);
@@ -57,6 +55,8 @@ public:
 
   cString GetActiveMode(void);
   cString RtspUnescapeString(const char *strP);
+  void Create(void);
+  void Destroy(void);
   void Reset(void);
   bool SetInterface(const char *bindAddrP);
   bool Receive(const char *uriP);

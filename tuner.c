@@ -218,6 +218,7 @@ bool cSatipTuner::Connect(void)
   cMutexLock MutexLock(&mutexM);
   debug1("%s [device %d]", __PRETTY_FUNCTION__, deviceIdM);
 
+  rtspM.Create();
   if (!isempty(*streamAddrM)) {
      cString connectionUri = GetBaseUrl(*streamAddrM, streamPortM);
      tnrParamM = "";
@@ -255,7 +256,7 @@ bool cSatipTuner::Connect(void)
            return true;
            }
         }
-     rtspM.Reset();
+     rtspM.Destroy();
      streamIdM = -1;
      error("Connect failed [device %d]", deviceIdM);
      }
@@ -272,7 +273,7 @@ bool cSatipTuner::Disconnect(void)
      cString uri = cString::sprintf("%sstream=%d", *lastAddrM, streamIdM);
      rtspM.Teardown(*uri);
      // some devices requires a teardown for TCP connection also
-     rtspM.Reset();
+     rtspM.Destroy();
      streamIdM = -1;
      }
 
