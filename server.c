@@ -83,7 +83,7 @@ bool cSatipFrontends::Attach(int deviceIdP, int transponderP)
 bool cSatipFrontends::Detach(int deviceIdP, int transponderP)
 {
   for (cSatipFrontend *f = First(); f; f = Next(f)) {
-      if (f->Transponder() == transponderP) {
+      if (f->DeviceId() == deviceIdP) {
          f->Detach(deviceIdP);
          debug9("%s detached deviceID %d (TP %d) from %s/#%d", __PRETTY_FUNCTION__, deviceIdP, transponderP, *f->Description(), f->Index());
          return true;
