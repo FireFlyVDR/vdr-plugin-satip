@@ -501,19 +501,17 @@ bool cSatipTuner::UpdatePids(bool forceP)
 {
   debug16("%s (%d) tunerState=%s [device %d]", __PRETTY_FUNCTION__, forceP, TunerStateString(currentStateM), deviceIdM);
   cMutexLock MutexLock(&mutexM);
-  if (((forceP && pidsM.Size()) || (pidUpdateCacheM.TimedOut() && (addPidsM.Size() || delPidsM.Size()))) &&
+  if ((forceP || (pidUpdateCacheM.TimedOut() && (addPidsM.Size() || delPidsM.Size()))) &&
       !isempty(*streamAddrM) && (streamIdM >= 0)) {
      cString uri = cString::sprintf("%sstream=%d", *GetBaseUrl(*streamAddrM, streamPortM), streamIdM);
      bool useci = (SatipConfig.GetCIExtension() && currentServerM.HasCI());
      bool usedummy = currentServerM.IsQuirk(cSatipServer::eSatipQuirkPlayPids);
      bool paramadded = false;
      if (forceP || usedummy) {
-        if (pidsM.Size()) {
-           uri = cString::sprintf("%s%spids=%s", *uri, paramadded ? "&" : "?", *pidsM.ListPids());
-           if (usedummy && (pidsM.Size() == 1) && (pidsM[0] < 0x20))
-              uri = cString::sprintf("%s,%d", *uri, eDummyPid);
-           paramadded = true;
-           }
+        uri = cString::sprintf("%s?pids=%s", *uri, *pidsM.ListPids());
+        paramadded = true;
+        if (usedummy && (pidsM.Size() == 1) && (pidsM[0] < 0x20))
+           uri = cString::sprintf("%s,%d", *uri, eDummyPid);
         }
      else {
         if (addPidsM.Size()) {

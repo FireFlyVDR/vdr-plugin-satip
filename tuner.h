@@ -45,6 +45,8 @@ public:
            list = cString::sprintf("%s%d,", *list, At(i));
        list = list.Truncate(-1);
        }
+    else
+       list = "none";
     return list;
   }
 };
