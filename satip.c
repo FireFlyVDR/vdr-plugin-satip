@@ -51,7 +51,6 @@ public:
   virtual bool Start(void);
   virtual void Stop(void);
   virtual void Housekeeping(void);
-  virtual void MainThreadHook(void);
   virtual cString Active(void);
   virtual time_t WakeupTime(void);
   virtual const char *MainMenuEntry(void) { return NULL; }
@@ -215,13 +214,6 @@ void cPluginSatip::Housekeeping(void)
 {
   debug16("%s", __PRETTY_FUNCTION__);
   // Perform any cleanup or other regular tasks.
-}
-
-void cPluginSatip::MainThreadHook(void)
-{
-  debug16("%s", __PRETTY_FUNCTION__);
-  // Perform actions in the context of the main program thread.
-  // WARNING: Use with great care - see PLUGINS.html!
 }
 
 cString cPluginSatip::Active(void)
