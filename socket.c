@@ -156,6 +156,7 @@ bool cSatipSocket::Flush(void)
            if (++i > 10)
               break;
         } while (Read(buf, len));
+        free(buf);
         return true;
         }
      }
