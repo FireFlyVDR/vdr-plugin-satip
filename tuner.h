@@ -103,12 +103,11 @@ private:
   cSatipRtsp rtspM;
   cSatipRtp rtpM;
   cSatipRtcp rtcpM;
-  cString streamAddrM;
+  cString baseURL;
   cString streamParamM;
-  cString lastAddrM;
+  cString lastBaseURL;
   cString lastParamM;
   cString tnrParamM;
-  int streamPortM;
   cSatipTunerServer currentServerM;
   cSatipTunerServer nextServerM;
   cMutex mutexM;
@@ -144,7 +143,7 @@ private:
   bool RequestState(eTunerState stateP, eStateMode modeP);
   const char *StateModeString(eStateMode modeP);
   const char *TunerStateString(eTunerState stateP);
-  cString GetBaseUrl(const char *addressP, const int portP);
+  void SetBaseUrl(const char *addressP, const int portP);
 
 protected:
   virtual void Action(void);

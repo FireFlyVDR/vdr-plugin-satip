@@ -23,12 +23,11 @@ cSatipTuner::cSatipTuner(cSatipDeviceIf &deviceP, unsigned int packetLenP)
   rtspM(*this),
   rtpM(*this),
   rtcpM(*this),
-  streamAddrM(""),
+  baseURL(""),
   streamParamM(""),
-  lastAddrM(""),
+  lastBaseURL(""),
   lastParamM(""),
   tnrParamM(""),
-  streamPortM(SATIP_DEFAULT_RTSP_PORT),
   currentServerM(NULL, deviceP.GetId(), 0),
   nextServerM(NULL, deviceP.GetId(), 0),
   mutexM(),
@@ -219,8 +218,7 @@ bool cSatipTuner::Connect(void)
   debug1("%s [device %d]", __PRETTY_FUNCTION__, deviceIdM);
 
   rtspM.Create();
-  if (!isempty(*streamAddrM)) {
-     cString connectionUri = GetBaseUrl(*streamAddrM, streamPortM);
+  if (!isempty(*baseURL)) {
      tnrParamM = "";
      // Just retune
      if (streamIdM >= 0) {
@@ -228,7 +226,7 @@ bool cSatipTuner::Connect(void)
            debug1("%s Identical parameters [device %d]", __PRETTY_FUNCTION__, deviceIdM);
            return true;
            }
-        cString uri = cString::sprintf("%sstream=%d?%s", *connectionUri, streamIdM, *streamParamM);
+        cString uri = cString::sprintf("%sstream=%d?%s", *baseURL, streamIdM, *streamParamM);
         debug1("%s Retuning [device %d]", __PRETTY_FUNCTION__, deviceIdM);
         if (rtspM.Play(*uri)) {
            keepAliveM.Set(timeoutM);
@@ -236,8 +234,8 @@ bool cSatipTuner::Connect(void)
            return true;
            }
         }
-     else if (rtspM.SetInterface(nextServerM.IsValid() ? *nextServerM.GetSrcAddress() : NULL) && rtspM.Options(*connectionUri)) {
-        cString uri = cString::sprintf("%s?%s", *connectionUri, *streamParamM);
+     else if (rtspM.SetInterface(nextServerM.IsValid() ? *nextServerM.GetSrcAddress() : NULL) && rtspM.Options(*baseURL)) {
+        cString uri = cString::sprintf("%s?%s", *baseURL, *streamParamM);
         bool useTcp = SatipConfig.IsTransportModeRtpOverTcp() && nextServerM.IsValid() && nextServerM.IsQuirk(cSatipServer::eSatipQuirkRtpOverTcp);
         // Flush any old content
         //rtpM.Flush();
@@ -251,7 +249,7 @@ bool cSatipTuner::Connect(void)
               currentServerM = nextServerM;
               nextServerM.Reset();
               }
-           lastAddrM = connectionUri;
+           lastBaseURL = baseURL;
            currentServerM.Attach();
            return true;
            }
@@ -269,8 +267,8 @@ bool cSatipTuner::Disconnect(void)
   cMutexLock MutexLock(&mutexM);
   debug1("%s [device %d]", __PRETTY_FUNCTION__, deviceIdM);
 
-  if (!isempty(*lastAddrM) && (streamIdM >= 0)) {
-     cString uri = cString::sprintf("%sstream=%d", *lastAddrM, streamIdM);
+  if (!isempty(*lastBaseURL) && (streamIdM >= 0)) {
+     cString uri = cString::sprintf("%sstream=%d", *lastBaseURL, streamIdM);
      rtspM.Teardown(*uri);
      // some devices requires a teardown for TCP connection also
      rtspM.Destroy();
@@ -429,14 +427,14 @@ void cSatipTuner::SetupTransport(int rtpPortP, int rtcpPortP, const char *stream
      }
 }
 
-cString cSatipTuner::GetBaseUrl(const char *addressP, const int portP)
+void cSatipTuner::SetBaseUrl(const char *addressP, const int portP)
 {
   debug16("%s (%s, %d) [device %d]", __PRETTY_FUNCTION__, addressP, portP, deviceIdM);
 
   if (portP != SATIP_DEFAULT_RTSP_PORT)
-     return cString::sprintf("rtsp://%s:%d/", addressP, portP);
-
-  return cString::sprintf("rtsp://%s/", addressP);
+     baseURL = cString::sprintf("rtsp://%s:%d/", addressP, portP);
+  else
+     baseURL = cString::sprintf("rtsp://%s/", addressP);
 }
 
 int cSatipTuner::GetId(void)
@@ -453,16 +451,16 @@ bool cSatipTuner::SetSource(cSatipServer *serverP, const int transponderP, const
      nextServerM.Set(serverP, transponderP);
      if (!isempty(*nextServerM.GetAddress()) && !isempty(parameterP)) {
         // Update stream address and parameter
-        streamAddrM = rtspM.RtspUnescapeString(*nextServerM.GetAddress());
+        cString streamAddr = rtspM.RtspUnescapeString(*nextServerM.GetAddress());
         streamParamM = rtspM.RtspUnescapeString(parameterP);
-        streamPortM = nextServerM.GetPort();
+        int streamPort = nextServerM.GetPort();
+        SetBaseUrl(*streamAddr, streamPort);
         // Modify parameter if required
         if (nextServerM.IsQuirk(cSatipServer::eSatipQuirkForcePilot) && strstr(parameterP, "msys=dvbs2") && !strstr(parameterP, "plts="))
            streamParamM = rtspM.RtspUnescapeString(*cString::sprintf("%s&plts=on", parameterP));
         // Reconnect
-        if (!isempty(*lastAddrM)) {
-           cString connectionUri = GetBaseUrl(*streamAddrM, streamPortM);
-           if (strcmp(*connectionUri, *lastAddrM))
+        if (!isempty(*lastBaseURL)) {
+           if (strcmp(*baseURL, *lastBaseURL))
               RequestState(tsRelease, smInternal);
            }
         RequestState(tsSet, smExternal);
@@ -470,7 +468,7 @@ bool cSatipTuner::SetSource(cSatipServer *serverP, const int transponderP, const
         }
      }
   else {
-     streamAddrM = "";
+     baseURL = "";
      streamParamM = "";
      }
 
@@ -502,8 +500,8 @@ bool cSatipTuner::UpdatePids(bool forceP)
   debug16("%s (%d) tunerState=%s [device %d]", __PRETTY_FUNCTION__, forceP, TunerStateString(currentStateM), deviceIdM);
   cMutexLock MutexLock(&mutexM);
   if ((forceP || (pidUpdateCacheM.TimedOut() && (addPidsM.Size() || delPidsM.Size()))) &&
-      !isempty(*streamAddrM) && (streamIdM >= 0)) {
-     cString uri = cString::sprintf("%sstream=%d", *GetBaseUrl(*streamAddrM, streamPortM), streamIdM);
+      !isempty(*baseURL) && (streamIdM >= 0)) {
+     cString uri = cString::sprintf("%sstream=%d", *baseURL, streamIdM);
      bool useci = (SatipConfig.GetCIExtension() && currentServerM.HasCI());
      bool usedummy = currentServerM.IsQuirk(cSatipServer::eSatipQuirkPlayPids);
      bool paramadded = false;
@@ -568,9 +566,8 @@ bool cSatipTuner::Receive(void)
 {
   debug16("%s tunerState=%s [device %d]", __PRETTY_FUNCTION__, TunerStateString(currentStateM), deviceIdM);
   cMutexLock MutexLock(&mutexM);
-  if (!isempty(*streamAddrM)) {
-     cString uri = GetBaseUrl(*streamAddrM, streamPortM);
-     if (!rtspM.Receive(*uri))
+  if (!isempty(*baseURL)) {
+     if (!rtspM.Receive(*baseURL))
         return false;
      }
 
@@ -585,9 +582,8 @@ bool cSatipTuner::KeepAlive(bool forceP)
      keepAliveM.Set(timeoutM);
      forceP = true;
      }
-  if (forceP && !isempty(*streamAddrM)) {
-     cString uri = GetBaseUrl(*streamAddrM, streamPortM);
-     if (!rtspM.Options(*uri))
+  if (forceP && !isempty(*baseURL)) {
+     if (!rtspM.Options(*baseURL))
         return false;
      }
 
@@ -602,8 +598,8 @@ bool cSatipTuner::ReadReceptionStatus(bool forceP)
      statusUpdateM.Set(eStatusUpdateTimeoutMs);
      forceP = true;
      }
-  if (forceP && !isempty(*streamAddrM) && (streamIdM >= 0)) {
-     cString uri = cString::sprintf("%sstream=%d", *GetBaseUrl(*streamAddrM, streamPortM), streamIdM);
+  if (forceP && !isempty(*baseURL) && (streamIdM >= 0)) {
+     cString uri = cString::sprintf("%sstream=%d", *baseURL, streamIdM);
      if (rtspM.Describe(*uri))
         return true;
      }
@@ -744,5 +740,5 @@ cString cSatipTuner::GetSignalStatus(void)
 cString cSatipTuner::GetInformation(void)
 {
   debug16("%s [device %d]", __PRETTY_FUNCTION__, deviceIdM);
-  return (currentStateM >= tsTuned) ? cString::sprintf("%s?%s (%s) [stream=%d]", *GetBaseUrl(*streamAddrM, streamPortM), *streamParamM, *rtspM.GetActiveMode(), streamIdM) : "connection failed";
+  return (currentStateM >= tsTuned) ? cString::sprintf("%s?%s (%s) [stream=%d]", *baseURL, *streamParamM, *rtspM.GetActiveMode(), streamIdM) : "connection failed";
 }
