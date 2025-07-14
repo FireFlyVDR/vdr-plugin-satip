@@ -110,7 +110,7 @@ private:
   cString tnrParamM;
   cSatipTunerServer currentServerM;
   cSatipTunerServer nextServerM;
-  cMutex mutexM;
+  cMutex mutexTunerM;
   cTimeMs reConnectM;
   cTimeMs keepAliveM;
   cTimeMs statusUpdateM;

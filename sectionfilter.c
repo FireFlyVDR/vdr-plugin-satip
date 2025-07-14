@@ -206,7 +206,7 @@ int cSatipSectionFilter::Available(void) const
 cSatipSectionFilterHandler::cSatipSectionFilterHandler(int deviceIndexP, unsigned int bufferLenP)
 : cThread(cString::sprintf("SATIP#%d section handler", deviceIndexP)),
   ringBufferM(new cRingBufferLinear(bufferLenP, TS_SIZE, false, *cString::sprintf("SATIP %d section handler", deviceIndexP))),
-  mutexM(),
+  mutexSecFilterHandlerM(),
   deviceIndexM(deviceIndexP)
 {
   debug1("%s (%d, %d) [device %d]", __PRETTY_FUNCTION__, deviceIndexM, bufferLenP, deviceIndexM);
@@ -234,14 +234,14 @@ cSatipSectionFilterHandler::~cSatipSectionFilterHandler()
   DELETE_POINTER(ringBufferM);
 
   // Destroy all filters
-  cMutexLock MutexLock(&mutexM);
+  cMutexLock MutexLock(&mutexSecFilterHandlerM);
   for (int i = 0; i < eMaxSecFilterCount; ++i)
       Delete(i);
 }
 
 void cSatipSectionFilterHandler::SendAll(void)
 {
-  cMutexLock MutexLock(&mutexM);
+  cMutexLock MutexLock(&mutexSecFilterHandlerM);
   bool pendingData;
   do {
      pendingData = false;
@@ -294,12 +294,12 @@ void cSatipSectionFilterHandler::Action(void)
                     continue;
                     }
                     // Process TS packet through all filters
-                    mutexM.Lock();
+                    mutexSecFilterHandlerM.Lock();
                     for (unsigned int i = 0; i < eMaxSecFilterCount; ++i) {
                         if (filtersM[i])
                            filtersM[i]->Process(p);
                         }
-                    mutexM.Unlock();
+                    mutexSecFilterHandlerM.Unlock();
                     ringBufferM->Del(TS_SIZE);
                     }
                 }
@@ -314,7 +314,7 @@ cString cSatipSectionFilterHandler::GetInformation(void)
 {
   debug16("%s [device %d]", __PRETTY_FUNCTION__, deviceIndexM);
   // loop through active section filters
-  cMutexLock MutexLock(&mutexM);
+  cMutexLock MutexLock(&mutexSecFilterHandlerM);
   cString s = "";
   unsigned int count = 0;
   for (unsigned int i = 0; i < eMaxSecFilterCount; ++i) {
@@ -332,7 +332,7 @@ cString cSatipSectionFilterHandler::GetInformation(void)
 bool cSatipSectionFilterHandler::Exists(u_short pidP)
 {
   debug16("%s (%d) [device %d]", __PRETTY_FUNCTION__, pidP, deviceIndexM);
-  cMutexLock MutexLock(&mutexM);
+  cMutexLock MutexLock(&mutexSecFilterHandlerM);
   for (unsigned int i = 0; i < eMaxSecFilterCount; ++i) {
       if (filtersM[i] && (pidP == filtersM[i]->GetPid())) {
          debug12("%s (%d) Found [device %d]", __PRETTY_FUNCTION__, pidP, deviceIndexM);
@@ -374,7 +374,7 @@ bool cSatipSectionFilterHandler::IsBlackListed(u_short pidP, u_char tidP, u_char
 
 int cSatipSectionFilterHandler::Open(u_short pidP, u_char tidP, u_char maskP)
 {
-  cMutexLock MutexLock(&mutexM);
+  cMutexLock MutexLock(&mutexSecFilterHandlerM);
   // Blacklist check, refuse certain filters
   if (IsBlackListed(pidP, tidP, maskP))
      return -1;
@@ -392,7 +392,7 @@ int cSatipSectionFilterHandler::Open(u_short pidP, u_char tidP, u_char maskP)
 
 void cSatipSectionFilterHandler::Close(int handleP)
 {
-  cMutexLock MutexLock(&mutexM);
+  cMutexLock MutexLock(&mutexSecFilterHandlerM);
   // Search the filter for deletion
   for (unsigned int i = 0; i < eMaxSecFilterCount; ++i) {
       if (filtersM[i] && (handleP == filtersM[i]->GetFd())) {
@@ -405,7 +405,7 @@ void cSatipSectionFilterHandler::Close(int handleP)
 
 int cSatipSectionFilterHandler::GetPid(int handleP)
 {
-  cMutexLock MutexLock(&mutexM);
+  cMutexLock MutexLock(&mutexSecFilterHandlerM);
   // Search the filter for data
   for (unsigned int i = 0; i < eMaxSecFilterCount; ++i) {
       if (filtersM[i] && (handleP == filtersM[i]->GetFd())) {

@@ -24,7 +24,7 @@ private:
   long filteredDataM;
   long numberOfCallsM;
   cTimeMs timerM;
-  cMutex mutexM;
+  cMutex mutexStatSectionM;
 };
 
 // Pid statistics
@@ -44,7 +44,7 @@ private:
   };
   pidStruct mostActivePidsM[SATIP_STATS_ACTIVE_PIDS_COUNT];
   cTimeMs timerM;
-  cMutex mutexM;
+  cMutex mutexStatPidM;
 
 private:
   static int SortPids(const void* data1P, const void* data2P);
@@ -63,7 +63,7 @@ protected:
 private:
   long dataBytesM;
   cTimeMs timerM;
-  cMutex mutexM;
+  cMutex mutexStatTunerM;
 };
 
 // Buffer statistics
@@ -81,7 +81,7 @@ private:
   long freeSpaceM;
   long usedSpaceM;
   cTimeMs timerM;
-  cMutex mutexM;
+  cMutex mutexStatBufferM;
 };
 
 #endif // __SATIP_STATISTICS_H

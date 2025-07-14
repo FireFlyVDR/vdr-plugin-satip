@@ -58,7 +58,7 @@ private:
   static size_t HeaderCallback(char *ptrP, size_t sizeP, size_t nmembP, void *dataP);
   static size_t DataCallback(char *ptrP, size_t sizeP, size_t nmembP, void *dataP);
   static int    DebugCallback(CURL *handleP, curl_infotype typeP, char *dataP, size_t sizeP, void *userPtrP);
-  cMutex mutexM;
+  cMutex mutexDiscoverM;
   cSatipMemoryBuffer headerBufferM;
   cSatipMemoryBuffer dataBufferM;
   cSatipMsearch msearchM;

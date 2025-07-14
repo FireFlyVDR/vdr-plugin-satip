@@ -30,7 +30,7 @@ cSatipTuner::cSatipTuner(cSatipDeviceIf &deviceP, unsigned int packetLenP)
   tnrParamM(""),
   currentServerM(NULL, deviceP.GetId(), 0),
   nextServerM(NULL, deviceP.GetId(), 0),
-  mutexM(),
+  mutexTunerM(),
   reConnectM(),
   keepAliveM(),
   statusUpdateM(),
@@ -193,7 +193,7 @@ void cSatipTuner::Action(void)
 
 bool cSatipTuner::Open(void)
 {
-  cMutexLock MutexLock(&mutexM);
+  cMutexLock MutexLock(&mutexTunerM);
   debug1("%s [device %d]", __PRETTY_FUNCTION__, deviceIdM);
 
   // return always true
@@ -202,7 +202,7 @@ bool cSatipTuner::Open(void)
 
 bool cSatipTuner::Close(void)
 {
-  cMutexLock MutexLock(&mutexM);
+  cMutexLock MutexLock(&mutexTunerM);
   debug1("%s [device %d]", __PRETTY_FUNCTION__, deviceIdM);
 
   if (setupTimeoutM.TimedOut())
@@ -214,7 +214,7 @@ bool cSatipTuner::Close(void)
 
 bool cSatipTuner::Connect(void)
 {
-  cMutexLock MutexLock(&mutexM);
+  cMutexLock MutexLock(&mutexTunerM);
   debug1("%s [device %d]", __PRETTY_FUNCTION__, deviceIdM);
 
   rtspM.Create();
@@ -264,7 +264,7 @@ bool cSatipTuner::Connect(void)
 
 bool cSatipTuner::Disconnect(void)
 {
-  cMutexLock MutexLock(&mutexM);
+  cMutexLock MutexLock(&mutexTunerM);
   debug1("%s [device %d]", __PRETTY_FUNCTION__, deviceIdM);
 
   if (!isempty(*lastBaseURL) && (streamIdM >= 0)) {
@@ -380,14 +380,14 @@ void cSatipTuner::ProcessRtcpData(u_char *bufferP, int lengthP)
 
 void cSatipTuner::SetStreamId(int streamIdP)
 {
-  cMutexLock MutexLock(&mutexM);
+  cMutexLock MutexLock(&mutexTunerM);
   debug1("%s (%d) [device %d]", __PRETTY_FUNCTION__, streamIdP, deviceIdM);
   streamIdM = streamIdP;
 }
 
 void cSatipTuner::SetSessionTimeout(const char *sessionP, int timeoutP)
 {
-  cMutexLock MutexLock(&mutexM);
+  cMutexLock MutexLock(&mutexTunerM);
   debug1("%s (%s, %d) [device %d]", __PRETTY_FUNCTION__, sessionP, timeoutP, deviceIdM);
   sessionM = sessionP;
   if (nextServerM.IsQuirk(cSatipServer::eSatipQuirkSessionId) && !isempty(*sessionM) && startswith(*sessionM, "0"))
@@ -398,7 +398,7 @@ void cSatipTuner::SetSessionTimeout(const char *sessionP, int timeoutP)
 
 void cSatipTuner::SetupTransport(int rtpPortP, int rtcpPortP, const char *streamAddrP, const char *sourceAddrP)
 {
-  cMutexLock MutexLock(&mutexM);
+  cMutexLock MutexLock(&mutexTunerM);
   debug1("%s (%d, %d, %s, %s) [device %d]", __PRETTY_FUNCTION__, rtpPortP, rtcpPortP, streamAddrP, sourceAddrP, deviceIdM);
   bool multicast = !isempty(streamAddrP);
   // Adapt RTP to any transport media change
@@ -446,7 +446,7 @@ int cSatipTuner::GetId(void)
 bool cSatipTuner::SetSource(cSatipServer *serverP, const int transponderP, const char *parameterP, const int indexP)
 {
   debug1("%s (%d, %s, %d) [device %d]", __PRETTY_FUNCTION__, transponderP, parameterP, indexP, deviceIdM);
-  cMutexLock MutexLock(&mutexM);
+  cMutexLock MutexLock(&mutexTunerM);
   if (serverP) {
      nextServerM.Set(serverP, transponderP);
      if (!isempty(*nextServerM.GetAddress()) && !isempty(parameterP)) {
@@ -478,7 +478,7 @@ bool cSatipTuner::SetSource(cSatipServer *serverP, const int transponderP, const
 bool cSatipTuner::SetPid(int pidP, int typeP, bool onP)
 {
   debug16("%s (%d, %d, %d) [device %d]", __PRETTY_FUNCTION__, pidP, typeP, onP, deviceIdM);
-  cMutexLock MutexLock(&mutexM);
+  cMutexLock MutexLock(&mutexTunerM);
   if (onP) {
      pidsM.AddPid(pidP);
      addPidsM.AddPid(pidP);
@@ -498,7 +498,7 @@ bool cSatipTuner::SetPid(int pidP, int typeP, bool onP)
 bool cSatipTuner::UpdatePids(bool forceP)
 {
   debug16("%s (%d) tunerState=%s [device %d]", __PRETTY_FUNCTION__, forceP, TunerStateString(currentStateM), deviceIdM);
-  cMutexLock MutexLock(&mutexM);
+  cMutexLock MutexLock(&mutexTunerM);
   if ((forceP || (pidUpdateCacheM.TimedOut() && (addPidsM.Size() || delPidsM.Size()))) &&
       !isempty(*baseURL) && (streamIdM >= 0)) {
      cString uri = cString::sprintf("%sstream=%d", *baseURL, streamIdM);
@@ -565,7 +565,7 @@ bool cSatipTuner::UpdatePids(bool forceP)
 bool cSatipTuner::Receive(void)
 {
   debug16("%s tunerState=%s [device %d]", __PRETTY_FUNCTION__, TunerStateString(currentStateM), deviceIdM);
-  cMutexLock MutexLock(&mutexM);
+  cMutexLock MutexLock(&mutexTunerM);
   if (!isempty(*baseURL)) {
      if (!rtspM.Receive(*baseURL))
         return false;
@@ -577,7 +577,7 @@ bool cSatipTuner::Receive(void)
 bool cSatipTuner::KeepAlive(bool forceP)
 {
   debug16("%s (%d) tunerState=%s [device %d]", __PRETTY_FUNCTION__, forceP, TunerStateString(currentStateM), deviceIdM);
-  cMutexLock MutexLock(&mutexM);
+  cMutexLock MutexLock(&mutexTunerM);
   if (keepAliveM.TimedOut()) {
      keepAliveM.Set(timeoutM);
      forceP = true;
@@ -593,7 +593,7 @@ bool cSatipTuner::KeepAlive(bool forceP)
 bool cSatipTuner::ReadReceptionStatus(bool forceP)
 {
   debug16("%s (%d) tunerState=%s [device %d]", __PRETTY_FUNCTION__, forceP, TunerStateString(currentStateM), deviceIdM);
-  cMutexLock MutexLock(&mutexM);
+  cMutexLock MutexLock(&mutexTunerM);
   if (statusUpdateM.TimedOut()) {
      statusUpdateM.Set(eStatusUpdateTimeoutMs);
      forceP = true;
@@ -610,7 +610,7 @@ bool cSatipTuner::ReadReceptionStatus(bool forceP)
 void cSatipTuner::UpdateCurrentState(void)
 {
   debug16("%s [device %d]", __PRETTY_FUNCTION__, deviceIdM);
-  cMutexLock MutexLock(&mutexM);
+  cMutexLock MutexLock(&mutexTunerM);
   eTunerState state = currentStateM;
 
   if (internalStateM.Size()) {
@@ -630,7 +630,7 @@ void cSatipTuner::UpdateCurrentState(void)
 
 bool cSatipTuner::StateRequested(void)
 {
-  cMutexLock MutexLock(&mutexM);
+  cMutexLock MutexLock(&mutexTunerM);
   debug16("%s current=%s internal=%d external=%d [device %d]", __PRETTY_FUNCTION__, TunerStateString(currentStateM), internalStateM.Size(), externalStateM.Size(), deviceIdM);
 
   return (internalStateM.Size() || externalStateM.Size());
@@ -638,7 +638,7 @@ bool cSatipTuner::StateRequested(void)
 
 bool cSatipTuner::RequestState(eTunerState stateP, eStateMode modeP)
 {
-  cMutexLock MutexLock(&mutexM);
+  cMutexLock MutexLock(&mutexTunerM);
   debug1("%s (%s, %s) current=%s internal=%d external=%d [device %d]", __PRETTY_FUNCTION__, TunerStateString(stateP), StateModeString(modeP), TunerStateString(currentStateM), internalStateM.Size(), externalStateM.Size(), deviceIdM);
 
   if (modeP == smExternal)

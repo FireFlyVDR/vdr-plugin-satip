@@ -40,7 +40,7 @@ void cSatipPoller::Destroy(void)
 
 cSatipPoller::cSatipPoller()
 : cThread("SATIP poller"),
-  mutexM(),
+  mutexPollerM(),
   fdM(epoll_create(eMaxFileDescriptors))
 {
   debug1("%s", __PRETTY_FUNCTION__);
@@ -50,7 +50,7 @@ cSatipPoller::~cSatipPoller()
 {
   debug1("%s", __PRETTY_FUNCTION__);
   Deactivate();
-  cMutexLock MutexLock(&mutexM);
+  cMutexLock MutexLock(&mutexPollerM);
   close(fdM);
   // Free allocated memory
 }
@@ -64,7 +64,7 @@ void cSatipPoller::Activate(void)
 void cSatipPoller::Deactivate(void)
 {
   debug1("%s", __PRETTY_FUNCTION__);
-  cMutexLock MutexLock(&mutexM);
+  cMutexLock MutexLock(&mutexPollerM);
   if (Running())
      Cancel(3);
 }
@@ -100,7 +100,7 @@ void cSatipPoller::Action(void)
 bool cSatipPoller::Register(cSatipPollerIf &pollerP)
 {
   debug1("%s fd=%d", __PRETTY_FUNCTION__, pollerP.GetFd());
-  cMutexLock MutexLock(&mutexM);
+  cMutexLock MutexLock(&mutexPollerM);
 
   struct epoll_event ev;
   ev.events = EPOLLIN | EPOLLET;
@@ -114,7 +114,7 @@ bool cSatipPoller::Register(cSatipPollerIf &pollerP)
 bool cSatipPoller::Unregister(cSatipPollerIf &pollerP)
 {
   debug1("%s fd=%d", __PRETTY_FUNCTION__, pollerP.GetFd());
-  cMutexLock MutexLock(&mutexM);
+  cMutexLock MutexLock(&mutexPollerM);
   ERROR_IF_RET((epoll_ctl(fdM, EPOLL_CTL_DEL, pollerP.GetFd(), NULL) == -1), "epoll_ctl(EPOLL_CTL_DEL) failed", return false);
   debug1("%s Removed interface fd=%d", __PRETTY_FUNCTION__, pollerP.GetFd());
 

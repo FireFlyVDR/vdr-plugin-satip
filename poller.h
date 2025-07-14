@@ -19,7 +19,7 @@ private:
     eMaxFileDescriptors = SATIP_MAX_DEVICES * 2, // Data + Application
   };
   static cSatipPoller *instanceS;
-  cMutex mutexM;
+  cMutex mutexPollerM;
   int fdM;
   void Activate(void);
   void Deactivate(void);

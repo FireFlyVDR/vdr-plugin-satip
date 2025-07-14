@@ -64,7 +64,7 @@ private:
     eSecFilterSendTimeoutMs = 10
   };
   cRingBufferLinear *ringBufferM;
-  cMutex mutexM;
+  cMutex mutexSecFilterHandlerM;
   int deviceIndexM;
   cSatipSectionFilter *filtersM[eMaxSecFilterCount];
   struct pollfd pollFdsM[eMaxSecFilterCount];

@@ -31,6 +31,7 @@ private:
     eTuningTimeoutMs = 1000  // in milliseconds
   };
   unsigned int deviceIndexM;
+  static cMutex mutexDevicesS;
   int bytesDeliveredM;
   bool isOpenDvrM;
   bool checkTsBufferM;
@@ -44,7 +45,6 @@ private:
 
   // constructor & destructor
 public:
-  static cMutex mutexS;
   explicit cSatipDevice(unsigned int deviceIndexP);
   virtual ~cSatipDevice();
   cString GetInformation(unsigned int pageP = SATIP_DEVICE_INFO_ALL);

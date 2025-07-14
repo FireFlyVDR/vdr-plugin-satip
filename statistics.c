@@ -17,7 +17,7 @@ cSatipSectionStatistics::cSatipSectionStatistics()
 : filteredDataM(0),
   numberOfCallsM(0),
   timerM(),
-  mutexM()
+  mutexStatSectionM()
 {
   debug16("%s", __PRETTY_FUNCTION__);
 }
@@ -30,7 +30,7 @@ cSatipSectionStatistics::~cSatipSectionStatistics()
 cString cSatipSectionStatistics::GetSectionStatistic()
 {
   debug16("%s", __PRETTY_FUNCTION__);
-  cMutexLock MutexLock(&mutexM);
+  cMutexLock MutexLock(&mutexStatSectionM);
   uint64_t elapsed = timerM.Elapsed(); /* in milliseconds */
   timerM.Set();
   long bitrate = elapsed ? (long)(1000.0L * filteredDataM / KILOBYTE(1) / elapsed) : 0L;
@@ -46,7 +46,7 @@ cString cSatipSectionStatistics::GetSectionStatistic()
 void cSatipSectionStatistics::AddSectionStatistic(long bytesP, long callsP)
 {
   debug16("%s (%ld, %ld)", __PRETTY_FUNCTION__, bytesP, callsP);
-  cMutexLock MutexLock(&mutexM);
+  cMutexLock MutexLock(&mutexStatSectionM);
   filteredDataM += bytesP;
   numberOfCallsM += callsP;
 }
@@ -56,7 +56,7 @@ void cSatipSectionStatistics::AddSectionStatistic(long bytesP, long callsP)
 // Device statistics class
 cSatipPidStatistics::cSatipPidStatistics()
 : timerM(),
-  mutexM()
+  mutexStatPidM()
 {
   debug1("%s", __PRETTY_FUNCTION__);
   const int numberOfElements = sizeof(mostActivePidsM) / sizeof(pidStruct);
@@ -74,7 +74,7 @@ cSatipPidStatistics::~cSatipPidStatistics()
 cString cSatipPidStatistics::GetPidStatistic()
 {
   debug16("%s", __PRETTY_FUNCTION__);
-  cMutexLock MutexLock(&mutexM);
+  cMutexLock MutexLock(&mutexStatPidM);
   const int numberOfElements = sizeof(mostActivePidsM) / sizeof(pidStruct);
   uint64_t elapsed = timerM.Elapsed(); /* in milliseconds */
   timerM.Set();
@@ -111,7 +111,7 @@ int cSatipPidStatistics::SortPids(const void* data1P, const void* data2P)
 void cSatipPidStatistics::AddPidStatistic(int pidP, long payloadP)
 {
   debug16("%s (%d, %ld)", __PRETTY_FUNCTION__, pidP, payloadP);
-  cMutexLock MutexLock(&mutexM);
+  cMutexLock MutexLock(&mutexStatPidM);
   const int numberOfElements = sizeof(mostActivePidsM) / sizeof(pidStruct);
   // If our statistic already is in the array, update it and quit
   for (int i = 0; i < numberOfElements; ++i) {
@@ -138,7 +138,7 @@ void cSatipPidStatistics::AddPidStatistic(int pidP, long payloadP)
 cSatipTunerStatistics::cSatipTunerStatistics()
 : dataBytesM(0),
   timerM(),
-  mutexM()
+  mutexStatTunerM()
 {
   debug1("%s", __PRETTY_FUNCTION__);
 }
@@ -151,12 +151,12 @@ cSatipTunerStatistics::~cSatipTunerStatistics()
 cString cSatipTunerStatistics::GetTunerStatistic()
 {
   debug16("%s", __PRETTY_FUNCTION__);
-  mutexM.Lock();
+  mutexStatTunerM.Lock();
   uint64_t elapsed = timerM.Elapsed(); /* in milliseconds */
   timerM.Set();
   long bitrate = elapsed ? (long)(1000.0L * dataBytesM / KILOBYTE(1) / elapsed) : 0L;
   dataBytesM = 0;
-  mutexM.Unlock();
+  mutexStatTunerM.Unlock();
 
   if (!SatipConfig.GetUseBytes())
      bitrate *= 8;
@@ -167,7 +167,7 @@ cString cSatipTunerStatistics::GetTunerStatistic()
 void cSatipTunerStatistics::AddTunerStatistic(long bytesP)
 {
   debug16("%s (%ld)", __PRETTY_FUNCTION__, bytesP);
-  cMutexLock MutexLock(&mutexM);
+  cMutexLock MutexLock(&mutexStatTunerM);
   dataBytesM += bytesP;
 }
 
@@ -178,7 +178,7 @@ cSatipBufferStatistics::cSatipBufferStatistics()
   freeSpaceM(0),
   usedSpaceM(0),
   timerM(),
-  mutexM()
+  mutexStatBufferM()
 {
   debug1("%s", __PRETTY_FUNCTION__);
 }
@@ -191,7 +191,7 @@ cSatipBufferStatistics::~cSatipBufferStatistics()
 cString cSatipBufferStatistics::GetBufferStatistic()
 {
   debug16("%s", __PRETTY_FUNCTION__);
-  cMutexLock MutexLock(&mutexM);
+  cMutexLock MutexLock(&mutexStatBufferM);
   uint64_t elapsed = timerM.Elapsed(); /* in milliseconds */
   timerM.Set();
   long bitrate = elapsed ? (long)(1000.0L * dataBytesM / KILOBYTE(1) / elapsed) : 0L;
@@ -215,7 +215,7 @@ cString cSatipBufferStatistics::GetBufferStatistic()
 void cSatipBufferStatistics::AddBufferStatistic(long bytesP, long usedP)
 {
   debug16("%s (%ld, %ld)", __PRETTY_FUNCTION__, bytesP, usedP);
-  cMutexLock MutexLock(&mutexM);
+  cMutexLock MutexLock(&mutexStatBufferM);
   dataBytesM += bytesP;
   if (usedP > usedSpaceM)
      usedSpaceM = usedP;
