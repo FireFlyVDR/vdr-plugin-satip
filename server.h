@@ -10,36 +10,23 @@
 
 class cSatipServer;
 
-// --- cSatipFrontend ---------------------------------------------------------
-
-class cSatipFrontend : public cListObject {
-private:
-  int indexM;
-  int transponderM;
-  int deviceIdM;
-  cString descriptionM;
-
-public:
-  cSatipFrontend(const int indexP, const char *descriptionP);
-  virtual ~cSatipFrontend();
-  void Attach(int deviceIdP) { deviceIdM = deviceIdP; }
-  void Detach(int deviceIdP) { if (deviceIdP == deviceIdM) deviceIdM = -1; }
-  cString Description(void) { return descriptionM; }
-  bool Attached(void) { return (deviceIdM >= 0); }
-  int Index(void) { return indexM; }
-  int Transponder(void) { return transponderM; }
-  int DeviceId(void) { return deviceIdM; }
-  void SetTransponder(int transponderP) { transponderM = transponderP; }
-};
 
 // --- cSatipFrontends --------------------------------------------------------
 
-class cSatipFrontends : public cList<cSatipFrontend> {
+class cSatipFrontends {
+private:
+  int devicesAssigned[SATIP_MAX_DEVICES];
+  bool devicesAttached[SATIP_MAX_DEVICES];
+  int numDevices;
+  cString type;
 public:
-  bool Matches(int deviceIdP, int transponderP);
-  bool Assign(int deviceIdP, int transponderP);
-  bool Attach(int deviceIdP, int transponderP);
-  bool Detach(int deviceIdP, int transponderP);
+  cSatipFrontends(void);
+  bool Init(const char *Type, int NumDevices);
+  int Count(void) { return numDevices; };
+  bool Assign(int deviceIdP);
+  bool Attach(int deviceIdP);
+  bool Detach(int deviceIdP);
+  void LogAssignments(const char *Func, bool Result, int deviceIdP);
 };
 
 // --- cSatipServer -----------------------------------------------------------
@@ -64,7 +51,7 @@ private:
   cString filtersM;
   cString descriptionM;
   cString quirksM;
-  cSatipFrontends frontendsM[eSatipFrontendCount];
+  cSatipFrontends frontends[eSatipFrontendCount];
   int sourceFiltersM[eSatipMaxSourceFilters];
   int portM;
   int quirkM;
@@ -90,11 +77,10 @@ public:
   cSatipServer(const char *srcAddressP, const char *addressP, const int portP, const char *modelP, const char *filtersP, const char *descriptionP, const int quirkP);
   virtual ~cSatipServer();
   virtual int Compare(const cListObject &listObjectP) const;
-  bool Assign(int deviceIdP, int sourceP, int systemP, int transponderP);
+  bool Assign(int deviceIdP, int sourceP, int systemP);
   bool Matches(int sourceP);
-  bool Matches(int deviceIdP, int sourceP, int systemP, int transponderP);
-  void Attach(int deviceIdP, int transponderP);
-  void Detach(int deviceIdP, int transponderP);
+  void Attach(int deviceIdP);
+  void Detach(int deviceIdP);
   int GetModulesDVBS2(void);
   int GetModulesDVBT(void);
   int GetModulesDVBT2(void);
@@ -127,8 +113,8 @@ public:
   cSatipServer *Assign(int deviceIdP, int sourceP, int transponderP, int systemP);
   cSatipServer *Update(cSatipServer *serverP);
   void Activate(cSatipServer *serverP, bool onOffP);
-  void Attach(cSatipServer *serverP, int deviceIdP, int transponderP);
-  void Detach(cSatipServer *serverP, int deviceIdP, int transponderP);
+  void Attach(cSatipServer *serverP, int deviceIdP);
+  void Detach(cSatipServer *serverP, int deviceIdP);
   bool IsQuirk(cSatipServer *serverP, int quirkP);
   bool HasCI(cSatipServer *serverP);
   void Cleanup(uint64_t intervalMsP = 0);

@@ -367,14 +367,14 @@ void cSatipDiscover::AttachServer(cSatipServer *serverP, int deviceIdP, int tran
 {
   debug16("%s (, %d, %d)", __PRETTY_FUNCTION__, deviceIdP, transponderP);
   cMutexLock MutexLock(&mutexDiscoverM);
-  serversM.Attach(serverP, deviceIdP, transponderP);
+  serversM.Attach(serverP, deviceIdP);
 }
 
 void cSatipDiscover::DetachServer(cSatipServer *serverP, int deviceIdP, int transponderP)
 {
   debug16("%s (, %d, %d)", __PRETTY_FUNCTION__, deviceIdP, transponderP);
   cMutexLock MutexLock(&mutexDiscoverM);
-  serversM.Detach(serverP, deviceIdP, transponderP);
+  serversM.Detach(serverP, deviceIdP);
 }
 
 bool cSatipDiscover::IsServerQuirk(cSatipServer *serverP, int quirkP)

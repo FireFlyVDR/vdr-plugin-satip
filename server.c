@@ -12,84 +12,80 @@
 #include "log.h"
 #include "server.h"
 
-// --- cSatipFrontend ---------------------------------------------------------
-
-cSatipFrontend::cSatipFrontend(const int indexP, const char *descriptionP)
-: indexM(indexP),
-  transponderM(0),
-  deviceIdM(-1),
-  descriptionM(descriptionP)
-{
-}
-
-cSatipFrontend::~cSatipFrontend()
-{
-}
-
 // --- cSatipFrontends --------------------------------------------------------
 
-bool cSatipFrontends::Matches(int deviceIdP, int transponderP)
+cSatipFrontends::cSatipFrontends(void)
 {
-  for (cSatipFrontend *f = First(); f; f = Next(f)) {
-      if (f->Attached() && (f->DeviceId() == deviceIdP) && (f->Transponder() == transponderP))
+   numDevices = 0;
+}
+
+bool cSatipFrontends::Init(const char *Type, int NumDevices)
+{
+   numDevices = NumDevices;
+   type = Type;
+   for(int i = 0; i < numDevices; i++) {
+      devicesAssigned[i] = -1;
+      devicesAttached[i] = false;
+   }
+   return true;
+}
+
+bool cSatipFrontends::Assign(int deviceIdP)
+{
+   int nextFree = -1;
+   for(int i = 0; i < numDevices; i++) {
+      if (devicesAssigned[i] == deviceIdP) {
+         LogAssignments("Assign", true, deviceIdP);
          return true;
       }
-  return false;
+      else if (nextFree == -1 && devicesAssigned[i] == -1)
+         nextFree = i;
+   }
+   if (nextFree > -1) {
+      devicesAssigned[nextFree] = deviceIdP;
+      LogAssignments("Assign", true, deviceIdP);
+      return true;
+   }
+   LogAssignments("Assign", false, deviceIdP);
+   return false;
 }
 
-bool cSatipFrontends::Assign(int deviceIdP, int transponderP)
-{
-  cSatipFrontend *tmp = NULL;
-  // Prefer any used one
-  for (cSatipFrontend *f = First(); f; f = Next(f)) {
-      if (f->DeviceId() == deviceIdP) {  // give deviceID priority, but take detached frontend if deviceID ist not yet attached
-         tmp = f;
-         break;
-         }
-      if (!f->Attached()) {
-         tmp = f;
-         }
-      }
-  if (tmp) {
-     tmp->SetTransponder(transponderP);
-     debug9("%s assigned TP %d to %s/#%d", __PRETTY_FUNCTION__, transponderP, *tmp->Description(), tmp->Index());
-     return true;
-     }
-  error("no assignable frontend found [device %u]", deviceIdP);
-  return false;
-}
-
-bool cSatipFrontends::Attach(int deviceIdP, int transponderP)
-{
-  cSatipFrontend *tmp = NULL;
-  for (cSatipFrontend *f = First(); f; f = Next(f)) {
-      if (f->Transponder() == transponderP) {
-         tmp = f;
-         if (f->DeviceId() == deviceIdP) {
-            break;
-            }
-         }
-      }
-
-  if (tmp) {
-     tmp->Attach(deviceIdP);
-     debug9("%s attached deviceId %d (TP %d) to %s/#%d", __PRETTY_FUNCTION__, deviceIdP, transponderP, *tmp->Description(), tmp->Index());
-     return true;
-     }
-  error("%s no Frontend found for attaching deviceID %d (TP %d)", __PRETTY_FUNCTION__, deviceIdP, transponderP);
-  return false;
-}
-
-bool cSatipFrontends::Detach(int deviceIdP, int transponderP)
-{
-  for (cSatipFrontend *f = First(); f; f = Next(f)) {
-      if (f->DeviceId() == deviceIdP) {
-         f->Detach(deviceIdP);
-         debug9("%s detached deviceID %d (TP %d) from %s/#%d", __PRETTY_FUNCTION__, deviceIdP, transponderP, *f->Description(), f->Index());
+bool cSatipFrontends::Attach(int deviceIdP)
+{ //
+   for(int i = 0; i < numDevices; i++) {
+      if (devicesAssigned[i] == deviceIdP) {
+         devicesAttached[i] = true;
+         LogAssignments("Attach", true, deviceIdP);
          return true;
-         }
       }
-  return false;
+   }
+   LogAssignments("Attach", false, deviceIdP);
+   return false;
+}
+
+bool cSatipFrontends::Detach(int deviceIdP)
+{ //
+   for(int i = 0; i < numDevices; i++) {
+      if (devicesAssigned[i] == deviceIdP) {
+         devicesAttached[i] = false;
+         devicesAssigned[i] = -1;
+         LogAssignments("Detach", true, deviceIdP);
+         return true;
+      }
+   }
+   LogAssignments("Detach", false, deviceIdP);
+   return false;
+}
+
+void cSatipFrontends::LogAssignments(const char* Func, bool Result, int deviceIdP)
+{
+   if (numDevices) {
+      cString deviceList = cString::sprintf("cSatipFrontends::%s(deviceId=%d) deviceId list %s-%d %s:", Func, deviceIdP, *type, numDevices, Result?"T":"F");
+      for(int i = 0; i < numDevices; i++) {
+         deviceList.Append(cString::sprintf(" %d%c", devicesAssigned[i], devicesAttached[i]?'A':'D'));
+      }
+      isyslog(*deviceList);
+   }
 }
 
 // --- cSatipServer -----------------------------------------------------------
@@ -204,33 +200,27 @@ cSatipServer::cSatipServer(const char *srcAddressP, const char *addressP, const 
         char *c;
         if (c = strstr(r, "DVBS2-")) {
            int count = atoi(c + 6);
-           for (int i = 1; i <= count; ++i)
-               frontendsM[eSatipFrontendDVBS2].Add(new cSatipFrontend(i, "DVB-S2"));
+           frontends[eSatipFrontendDVBS2].Init("DVBS2", count);
            }
         else if (c = strstr(r, "DVBT-")) {
            int count = atoi(c + 5);
-           for (int i = 1; i <= count; ++i)
-               frontendsM[eSatipFrontendDVBT].Add(new cSatipFrontend(i, "DVB-T"));
+           frontends[eSatipFrontendDVBT].Init("DVBT", count);
            }
         else if (c = strstr(r, "DVBT2-")) {
            int count = atoi(c + 6);
-           for (int i = 1; i <= count; ++i)
-               frontendsM[eSatipFrontendDVBT2].Add(new cSatipFrontend(i, "DVB-T2"));
+           frontends[eSatipFrontendDVBT2].Init("DVBT2", count);
            }
         else if (c = strstr(r, "DVBC-")) {
            int count = atoi(c + 5);
-           for (int i = 1; i <= count; ++i)
-               frontendsM[eSatipFrontendDVBC].Add(new cSatipFrontend(i, "DVB-C"));
+           frontends[eSatipFrontendDVBC].Init("DVBC", count);
            }
         else if (c = strstr(r, "DVBC2-")) {
            int count = atoi(c + 6);
-           for (int i = 1; i <= count; ++i)
-               frontendsM[eSatipFrontendDVBC2].Add(new cSatipFrontend(i, "DVB-C2"));
+           frontends[eSatipFrontendDVBC2].Init("DVBC2", count);
            }
         else if (c = strstr(r, "ATSC-")) {
            int count = atoi(c + 5);
-           for (int i = 1; i <= count; ++i)
-               frontendsM[eSatipFrontendATSC].Add(new cSatipFrontend(i, "ATSC"));
+           frontends[eSatipFrontendATSC].Init("ATSC", count);
            }
         r = strtok_r(NULL, ",", &s);
         }
@@ -266,26 +256,26 @@ bool cSatipServer::IsValidSource(int sourceP)
   return true;
 }
 
-bool cSatipServer::Assign(int deviceIdP, int sourceP, int systemP, int transponderP)
+bool cSatipServer::Assign(int deviceIdP, int sourceP, int systemP)
 {
   bool result = false;
   if (IsValidSource(sourceP)) {
      if (cSource::IsType(sourceP, 'S'))
-        result = frontendsM[eSatipFrontendDVBS2].Assign(deviceIdP, transponderP);
+        result = frontends[eSatipFrontendDVBS2].Assign(deviceIdP);
      else if (cSource::IsType(sourceP, 'T')) {
         if (systemP)
-           result = frontendsM[eSatipFrontendDVBT2].Assign(deviceIdP, transponderP);
+           result = frontends[eSatipFrontendDVBT2].Assign(deviceIdP);
         else
-           result = frontendsM[eSatipFrontendDVBT].Assign(deviceIdP, transponderP) || frontendsM[eSatipFrontendDVBT2].Assign(deviceIdP, transponderP);
+           result = frontends[eSatipFrontendDVBT].Assign(deviceIdP) || frontends[eSatipFrontendDVBT2].Assign(deviceIdP);
         }
      else if (cSource::IsType(sourceP, 'C')) {
         if (systemP)
-           result = frontendsM[eSatipFrontendDVBC2].Assign(deviceIdP, transponderP);
+           result = frontends[eSatipFrontendDVBC2].Assign(deviceIdP);
         else
-           result = frontendsM[eSatipFrontendDVBC].Assign(deviceIdP, transponderP) || frontendsM[eSatipFrontendDVBC2].Assign(deviceIdP, transponderP);
+           result = frontends[eSatipFrontendDVBC].Assign(deviceIdP) || frontends[eSatipFrontendDVBC2].Assign(deviceIdP);
         }
      else if (cSource::IsType(sourceP, 'A'))
-        result = frontendsM[eSatipFrontendATSC].Assign(deviceIdP, transponderP);
+        result = frontends[eSatipFrontendATSC].Assign(deviceIdP);
      }
   return result;
 }
@@ -305,74 +295,50 @@ bool cSatipServer::Matches(int sourceP)
   return false;
 }
 
-bool cSatipServer::Matches(int deviceIdP, int sourceP, int systemP, int transponderP)
-{
-  bool result = false;
-  if (IsValidSource(sourceP)) {
-     if (cSource::IsType(sourceP, 'S'))
-        result = frontendsM[eSatipFrontendDVBS2].Matches(deviceIdP, transponderP);
-     else if (cSource::IsType(sourceP, 'T')) {
-        if (systemP)
-           result = frontendsM[eSatipFrontendDVBT2].Matches(deviceIdP, transponderP);
-        else
-           result = frontendsM[eSatipFrontendDVBT].Matches(deviceIdP, transponderP) || frontendsM[eSatipFrontendDVBT2].Matches(deviceIdP, transponderP);
-        }
-     else if (cSource::IsType(sourceP, 'C')) {
-        if (systemP)
-           result = frontendsM[eSatipFrontendDVBC2].Matches(deviceIdP, transponderP);
-        else
-           result = frontendsM[eSatipFrontendDVBC].Matches(deviceIdP, transponderP) || frontendsM[eSatipFrontendDVBC2].Matches(deviceIdP, transponderP);
-        }
-     else if (cSource::IsType(sourceP, 'A'))
-        result = frontendsM[eSatipFrontendATSC].Matches(deviceIdP, transponderP);
-     }
-  return result;
-}
-
-void cSatipServer::Attach(int deviceIdP, int transponderP)
+void cSatipServer::Attach(int deviceIdP)
 {
   for (int i = 0; i < eSatipFrontendCount; ++i) {
-      if (frontendsM[i].Attach(deviceIdP, transponderP))
+      if (frontends[i].Attach(deviceIdP))
          return;
       }
 }
 
-void cSatipServer::Detach(int deviceIdP, int transponderP)
+void cSatipServer::Detach(int deviceIdP)
 {
   for (int i = 0; i < eSatipFrontendCount; ++i) {
-      if (frontendsM[i].Detach(deviceIdP, transponderP))
+      if (frontends[i].Detach(deviceIdP))
          return;
       }
 }
 
 int cSatipServer::GetModulesDVBS2(void)
 {
-  return frontendsM[eSatipFrontendDVBS2].Count();
+  return frontends[eSatipFrontendDVBS2].Count();
 }
 
 int cSatipServer::GetModulesDVBT(void)
 {
-  return frontendsM[eSatipFrontendDVBT].Count();
+  return frontends[eSatipFrontendDVBT].Count();
 }
 
 int cSatipServer::GetModulesDVBT2(void)
 {
-  return frontendsM[eSatipFrontendDVBT2].Count();
+  return frontends[eSatipFrontendDVBT2].Count();
 }
 
 int cSatipServer::GetModulesDVBC(void)
 {
-  return frontendsM[eSatipFrontendDVBC].Count();
+  return frontends[eSatipFrontendDVBC].Count();
 }
 
 int cSatipServer::GetModulesDVBC2(void)
 {
-  return frontendsM[eSatipFrontendDVBC2].Count();
+  return frontends[eSatipFrontendDVBC2].Count();
 }
 
 int cSatipServer::GetModulesATSC(void)
 {
-  return frontendsM[eSatipFrontendATSC].Count();
+  return frontends[eSatipFrontendATSC].Count();
 }
 
 // --- cSatipServers ----------------------------------------------------------
@@ -398,11 +364,7 @@ cSatipServer *cSatipServers::Find(int sourceP)
 cSatipServer *cSatipServers::Assign(int deviceIdP, int sourceP, int transponderP, int systemP)
 {
   for (cSatipServer *s = First(); s; s = Next(s)) {
-      if (s->IsActive() && s->Matches(deviceIdP, sourceP, systemP, transponderP))
-         return s;
-      }
-  for (cSatipServer *s = First(); s; s = Next(s)) {
-      if (s->IsActive() && s->Assign(deviceIdP, sourceP, systemP, transponderP))
+      if (s->IsActive() && s->Assign(deviceIdP, sourceP, systemP))
          return s;
       }
   return NULL;
@@ -429,21 +391,21 @@ void cSatipServers::Activate(cSatipServer *serverP, bool onOffP)
       }
 }
 
-void cSatipServers::Attach(cSatipServer *serverP, int deviceIdP, int transponderP)
+void cSatipServers::Attach(cSatipServer *serverP, int deviceIdP)
 {
   for (cSatipServer *s = First(); s; s = Next(s)) {
       if (s == serverP) {
-         s->Attach(deviceIdP, transponderP);
+         s->Attach(deviceIdP);
          break;
          }
       }
 }
 
-void cSatipServers::Detach(cSatipServer *serverP, int deviceIdP, int transponderP)
+void cSatipServers::Detach(cSatipServer *serverP, int deviceIdP)
 {
   for (cSatipServer *s = First(); s; s = Next(s)) {
       if (s == serverP) {
-         s->Detach(deviceIdP, transponderP);
+         s->Detach(deviceIdP);
          break;
          }
       }
