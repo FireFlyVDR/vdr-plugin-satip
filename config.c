@@ -23,6 +23,7 @@ cSatipConfig::cSatipConfig(void)
   transportModeM(eTransportModeUnicast),
   detachedModeM(false),
   disableServerQuirksM(false),
+  disconnectIdleStreams(true),
   useSingleModelServersM(false),
   rtpRcvBufSizeM(0)
 {

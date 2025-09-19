@@ -25,6 +25,7 @@ private:
   unsigned int transportModeM;
   bool detachedModeM;
   bool disableServerQuirksM;
+  bool disconnectIdleStreams;
   bool useSingleModelServersM;
   int cicamsM[MAX_CICAM_COUNT];
   int disabledSourcesM[MAX_DISABLED_SOURCES_COUNT];
@@ -85,6 +86,7 @@ public:
   bool IsTransportModeMulticast(void) const { return (transportModeM == eTransportModeMulticast); }
   bool GetDetachedMode(void) const { return detachedModeM; }
   bool GetDisableServerQuirks(void) const { return disableServerQuirksM; }
+  bool DisconnectIdleStreams(void) const { return disconnectIdleStreams; }
   bool GetUseSingleModelServers(void) const { return useSingleModelServersM; }
   unsigned int GetDisabledSourcesCount(void) const;
   int GetDisabledSources(unsigned int indexP) const;
@@ -104,6 +106,7 @@ public:
   void SetTransportMode(unsigned int transportModeP) { transportModeM = transportModeP; }
   void SetDetachedMode(bool onOffP) { detachedModeM = onOffP; }
   void SetDisableServerQuirks(bool onOffP) { disableServerQuirksM = onOffP; }
+  void SetDisconnectIdleStreams(bool on) { disconnectIdleStreams = on; }
   void SetUseSingleModelServers(bool onOffP) { useSingleModelServersM = onOffP; }
   void SetDisabledSources(unsigned int indexP, int sourceP);
   void SetDisabledFilters(unsigned int indexP, int numberP);

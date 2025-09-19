@@ -254,7 +254,10 @@ bool cSatipTuner::Connect(void)
            return true;
            }
         }
-     rtspM.Destroy();
+     if (SatipConfig.DisconnectIdleStreams())
+        rtspM.Destroy();
+     else
+        rtspM.Reset();
      streamIdM = -1;
      error("Connect failed [device %d]", deviceIdM);
      }
@@ -271,7 +274,10 @@ bool cSatipTuner::Disconnect(void)
      cString uri = cString::sprintf("%sstream=%d", *lastBaseURL, streamIdM);
      rtspM.Teardown(*uri);
      // some devices requires a teardown for TCP connection also
-     rtspM.Destroy();
+     if (SatipConfig.DisconnectIdleStreams())
+        rtspM.Destroy();
+     else
+        rtspM.Reset();
      streamIdM = -1;
      }
 

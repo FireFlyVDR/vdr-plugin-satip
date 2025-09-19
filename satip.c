@@ -112,6 +112,7 @@ const char *cPluginSatip::CommandLineHelp(void)
          "  -D, --detach                  set the detached mode on\n"
          "  -S, --single                  set the single model server mode on\n"
          "  -n, --noquirks                disable autodetection of the server quirks\n"
+         "  -N, --nodisconnect            disable disconnect for idle streams\n"
          "  -p, --portrange=<start>-<end> set a range of ports used for the RT[C]P server\n"
          "                                a minimum of 2 ports per device is required.\n"
          "  -r, --rcvbuf                  override the size of the RTP receive buffer in bytes\n";
@@ -122,15 +123,16 @@ bool cPluginSatip::ProcessArgs(int argc, char *argv[])
   debug1("%s", __PRETTY_FUNCTION__);
   // Implement command line argument processing here if applicable.
   static const struct option long_options[] = {
-    { "devices",  required_argument, NULL, 'd' },
-    { "trace",    required_argument, NULL, 't' },
-    { "server",   required_argument, NULL, 's' },
-    { "portrange",required_argument, NULL, 'p' },
-    { "rcvbuf",   required_argument, NULL, 'r' },
-    { "detach",   no_argument,       NULL, 'D' },
-    { "single",   no_argument,       NULL, 'S' },
-    { "noquirks", no_argument,       NULL, 'n' },
-    { NULL,       no_argument,       NULL,  0  }
+    { "devices",      required_argument, NULL, 'd' },
+    { "trace",        required_argument, NULL, 't' },
+    { "server",       required_argument, NULL, 's' },
+    { "portrange",    required_argument, NULL, 'p' },
+    { "rcvbuf",       required_argument, NULL, 'r' },
+    { "detach",       no_argument,       NULL, 'D' },
+    { "single",       no_argument,       NULL, 'S' },
+    { "noquirks",     no_argument,       NULL, 'n' },
+    { "nodisconnect", no_argument,       NULL, 'N' },
+    { NULL,           no_argument,       NULL,  0  }
     };
 
   cString server;
@@ -155,6 +157,9 @@ bool cPluginSatip::ProcessArgs(int argc, char *argv[])
            break;
       case 'n':
            SatipConfig.SetDisableServerQuirks(true);
+           break;
+      case 'N':
+           SatipConfig.SetDisconnectIdleStreams(false);
            break;
       case 'p':
            portrange = optarg;
