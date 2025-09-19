@@ -35,7 +35,7 @@ bool cSatipFrontends::Assign(int deviceIdP)
    int nextFree = -1;
    for(int i = 0; i < numDevices; i++) {
       if (devicesAssigned[i] == deviceIdP) {
-         LogAssignments("Assign", true, deviceIdP);
+         debug9("%s %s-%u found assigned, deviceID list: %s [device %u]", __PRETTY_FUNCTION__, *type, numDevices, *DeviceIDList(), deviceIdP);
          return true;
       }
       else if (nextFree == -1 && devicesAssigned[i] == -1)
@@ -43,10 +43,10 @@ bool cSatipFrontends::Assign(int deviceIdP)
    }
    if (nextFree > -1) {
       devicesAssigned[nextFree] = deviceIdP;
-      LogAssignments("Assign", true, deviceIdP);
+      debug9("%s %s-%u assigned, deviceID list: %s [device %u]", __PRETTY_FUNCTION__, *type, numDevices, *DeviceIDList(), deviceIdP);
       return true;
    }
-   LogAssignments("Assign", false, deviceIdP);
+   debug9("%s %s-%u NOT assigned, deviceID list: %s [device %u]", __PRETTY_FUNCTION__, *type, numDevices, *DeviceIDList(), deviceIdP);
    return false;
 }
 
@@ -55,11 +55,11 @@ bool cSatipFrontends::Attach(int deviceIdP)
    for(int i = 0; i < numDevices; i++) {
       if (devicesAssigned[i] == deviceIdP) {
          devicesAttached[i] = true;
-         LogAssignments("Attach", true, deviceIdP);
+         debug9("%s %s-%u attached, deviceID list: %s [device %u]", __PRETTY_FUNCTION__, *type, numDevices, *DeviceIDList(), deviceIdP);
          return true;
       }
    }
-   LogAssignments("Attach", false, deviceIdP);
+   esyslog("%s %s-%u NOT attached, deviceID list: %s [device %u]", __PRETTY_FUNCTION__, *type, numDevices, *DeviceIDList(), deviceIdP);
    return false;
 }
 
@@ -69,23 +69,23 @@ bool cSatipFrontends::Detach(int deviceIdP)
       if (devicesAssigned[i] == deviceIdP) {
          devicesAttached[i] = false;
          devicesAssigned[i] = -1;
-         LogAssignments("Detach", true, deviceIdP);
+         debug9("%s %s-%u detached, deviceID list: %s [device %u]", __PRETTY_FUNCTION__, *type, numDevices, *DeviceIDList(), deviceIdP);
          return true;
       }
    }
-   LogAssignments("Detach", false, deviceIdP);
+   debug9("%s %s-%u NOT detached, deviceID list: %s [device %u]", __PRETTY_FUNCTION__, *type, numDevices, *DeviceIDList(), deviceIdP);
    return false;
 }
 
-void cSatipFrontends::LogAssignments(const char* Func, bool Result, int deviceIdP)
+cString cSatipFrontends::DeviceIDList(void)
 {
+   cString deviceIdList = "";
    if (numDevices) {
-      cString deviceList = cString::sprintf("cSatipFrontends::%s(deviceId=%d) deviceId list %s-%d %s:", Func, deviceIdP, *type, numDevices, Result?"T":"F");
       for(int i = 0; i < numDevices; i++) {
-         deviceList.Append(cString::sprintf(" %d%c", devicesAssigned[i], devicesAttached[i]?'A':'D'));
+         deviceIdList.Append(cString::sprintf(" %2d:%c", devicesAssigned[i], devicesAttached[i]?'A':'D'));
       }
-      isyslog(*deviceList);
    }
+   return deviceIdList;
 }
 
 // --- cSatipServer -----------------------------------------------------------

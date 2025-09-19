@@ -26,7 +26,7 @@ public:
   bool Assign(int deviceIdP);
   bool Attach(int deviceIdP);
   bool Detach(int deviceIdP);
-  void LogAssignments(const char *Func, bool Result, int deviceIdP);
+  cString DeviceIDList(void);
 };
 
 // --- cSatipServer -----------------------------------------------------------
