@@ -47,10 +47,11 @@ cSatipTuner::cSatipTuner(cSatipDeviceIf &deviceP, unsigned int packetLenP)
   signalQualityM(-1),
   frontendIdM(-1),
   streamIdM(-1),
-  pmtPidM(-1),
   addPidsM(),
   delPidsM(),
-  pidsM()
+  pidsM(),
+  pmtPids(),
+  needsReconnect(false)
 {
   debug1("%s (, %d) [device %d]", __PRETTY_FUNCTION__, packetLenP, deviceIdM);
 
@@ -119,8 +120,10 @@ void cSatipTuner::Action(void)
                break;
           case tsSet:
                debug4("%s: tsSet [device %d]", __PRETTY_FUNCTION__, deviceIdM);
-               if (currentServerM.IsQuirk(cSatipServer::eSatipQuirkTearAndPlay))
+               if (needsReconnect ||  currentServerM.IsQuirk(cSatipServer::eSatipQuirkTearAndPlay)) {
                   Disconnect();
+                  needsReconnect = false;
+               }
                if (Connect()) {
                   tuning.Set(eTuningTimeoutMs);
                   RequestState(tsTuned, smInternal);
@@ -188,6 +191,7 @@ void cSatipTuner::Action(void)
         if (!StateRequested())
            sleepM.Wait(eSleepTimeoutMs); // to avoid busy loop and reduce cpu load
         }
+  Disconnect();
   debug1("%s Exiting [device %d]", __PRETTY_FUNCTION__, deviceIdM);
 }
 
@@ -228,6 +232,7 @@ bool cSatipTuner::Connect(void)
            }
         cString uri = cString::sprintf("%sstream=%d?%s", *baseURL, streamIdM, *streamParamM);
         debug1("%s Retuning [device %d]", __PRETTY_FUNCTION__, deviceIdM);
+        isyslog("cSatipTuner::Connect() PLAY '%s' [device %d]",*uri, deviceIdM);
         if (rtspM.Play(*uri)) {
            keepAliveM.Set(timeoutM);
            lastParamM = streamParamM;
@@ -242,6 +247,7 @@ bool cSatipTuner::Connect(void)
         //rtcpM.Flush();
         if (useTcp)
            debug1("%s Requesting TCP [device %d]", __PRETTY_FUNCTION__, deviceIdM);
+        isyslog("cSatipTuner::Connect() SETUP '%s' [device %d]",*uri, deviceIdM);
         if (rtspM.Setup(*uri, rtpM.Port(), rtcpM.Port(), useTcp)) {
            lastParamM = streamParamM;
            keepAliveM.Set(timeoutM);
@@ -269,6 +275,7 @@ bool cSatipTuner::Disconnect(void)
 {
   cMutexLock MutexLock(&mutexTunerM);
   debug1("%s [device %d]", __PRETTY_FUNCTION__, deviceIdM);
+  isyslog("cSatipTuner::Disconnect() TEARDOWN stream=%d [device %d]", streamIdM, deviceIdM);
 
   if (!isempty(*lastBaseURL) && (streamIdM >= 0)) {
      cString uri = cString::sprintf("%sstream=%d", *lastBaseURL, streamIdM);
@@ -279,6 +286,7 @@ bool cSatipTuner::Disconnect(void)
      else
         rtspM.Reset();
      streamIdM = -1;
+     pidsM.Clear();
      }
 
   // Reset signal parameters
@@ -291,7 +299,6 @@ bool cSatipTuner::Disconnect(void)
   currentServerM.Detach();
   statusUpdateM.Set(0);
   timeoutM = eMinKeepAliveIntervalMs - eKeepAlivePreBufferMs;
-  pmtPidM = -1;
   addPidsM.Clear();
   delPidsM.Clear();
 
@@ -449,9 +456,10 @@ int cSatipTuner::GetId(void)
   return deviceIdM;
 }
 
-bool cSatipTuner::SetSource(cSatipServer *serverP, const int transponderP, const char *parameterP, const int indexP)
+bool cSatipTuner::SetSource(cSatipServer *serverP, const int transponderP, const char *parameterP, const int indexP, const bool NeedsReconnect)
 {
   debug1("%s (%d, %s, %d) [device %d]", __PRETTY_FUNCTION__, transponderP, parameterP, indexP, deviceIdM);
+  isyslog("cSatipTuner::SetSource(server=%s TP=%d parameter=%s deviceIndex=%d reconnect=%d) [device %d]", serverP->Description(), transponderP, parameterP, indexP, NeedsReconnect?1:0, deviceIdM);
   cMutexLock MutexLock(&mutexTunerM);
   if (serverP) {
      nextServerM.Set(serverP, transponderP);
@@ -466,8 +474,12 @@ bool cSatipTuner::SetSource(cSatipServer *serverP, const int transponderP, const
            streamParamM = rtspM.RtspUnescapeString(*cString::sprintf("%s&plts=on", parameterP));
         // Reconnect
         if (!isempty(*lastBaseURL)) {
-           if (strcmp(*baseURL, *lastBaseURL))
+           if (strcmp(*baseURL, *lastBaseURL)) {
+              needsReconnect = false;  // server change implies reconnect
               RequestState(tsRelease, smInternal);
+              }
+           else
+              needsReconnect = NeedsReconnect;
            }
         RequestState(tsSet, smExternal);
         setupTimeoutM.Set(eSetupTimeoutMs);
@@ -481,11 +493,11 @@ bool cSatipTuner::SetSource(cSatipServer *serverP, const int transponderP, const
   return true;
 }
 
-bool cSatipTuner::SetPid(int pidP, int typeP, bool onP)
+bool cSatipTuner::SetPid(int pidP, int typeP, bool Add)
 {
-  debug16("%s (%d, %d, %d) [device %d]", __PRETTY_FUNCTION__, pidP, typeP, onP, deviceIdM);
+  debug16("%s (%d, %d, %d) [device %d]", __PRETTY_FUNCTION__, pidP, typeP, Add, deviceIdM);
   cMutexLock MutexLock(&mutexTunerM);
-  if (onP) {
+  if (Add) {
      pidsM.AddPid(pidP);
      addPidsM.AddPid(pidP);
      delPidsM.RemovePid(pidP);
@@ -494,8 +506,11 @@ bool cSatipTuner::SetPid(int pidP, int typeP, bool onP)
      pidsM.RemovePid(pidP);
      delPidsM.AddPid(pidP);
      addPidsM.RemovePid(pidP);
+     if (pmtPids.IndexOf(pidP) > -1)
+        pmtPidLinger.Set(ePmtPidLingerTime);
      }
-  debug12("%s (%d, %d, %d) pids=%s [device %d]", __PRETTY_FUNCTION__, pidP, typeP, onP, *pidsM.ListPids(), deviceIdM);
+  debug12("%s (%d, %d, %d) pids=%s [device %d]", __PRETTY_FUNCTION__, pidP, typeP, Add, *pidsM.ListPids(), deviceIdM);
+  isyslog("cSatipTuner::SetPid(%s %d) pids=%s [device %d]", Add ? "add" : "del", pidP, *pidsM.ListPids(), deviceIdM);
   sleepM.Signal();
 
   return true;
@@ -505,7 +520,10 @@ bool cSatipTuner::UpdatePids(bool forceP)
 {
   debug16("%s (%d) tunerState=%s [device %d]", __PRETTY_FUNCTION__, forceP, TunerStateString(currentStateM), deviceIdM);
   cMutexLock MutexLock(&mutexTunerM);
-  if ((forceP || (pidUpdateCacheM.TimedOut() && (addPidsM.Size() || delPidsM.Size()))) &&
+  //if (forceP || (pidUpdateCacheM.TimedOut() && ((addPidsM.Size() || delPidsM.Size()))) || (pmtPids.Size() && pmtPidLinger.TimedOut()))
+  //   isyslog("cSatipTuner::UpdatePids(%s) pids: %d=%s pmtPids: %d=%s addPids: %d=%s delPids %d=%s timedOut=%s (%dms+%ldms) pmtTimeout=%ld baseURL='%s' streamId=%d [device %d]", forceP ? "forced" : "timeout", pidsM.Size(), *pidsM.ListPids(), pmtPids.Size(), *pmtPids.ListPids(), addPidsM.Size(), *addPidsM.ListPids(), delPidsM.Size(), *delPidsM.ListPids(), pidUpdateCacheM.TimedOut()?"yes":"no", ePidUpdateIntervalMs, pidUpdateCacheM.Elapsed(), pmtPidLinger.Elapsed(), *baseURL, streamIdM, deviceIdM);
+
+  if ((forceP || (pidUpdateCacheM.TimedOut() && ((addPidsM.Size() || delPidsM.Size()))) || (pmtPids.Size() && pmtPidLinger.TimedOut())) &&
       !isempty(*baseURL) && (streamIdM >= 0)) {
      cString uri = cString::sprintf("%sstream=%d", *baseURL, streamIdM);
      bool useci = (SatipConfig.GetCIExtension() && currentServerM.HasCI());
@@ -528,23 +546,31 @@ bool cSatipTuner::UpdatePids(bool forceP)
            }
         }
      if (useci) {
-        if (currentServerM.IsQuirk(cSatipServer::eSatipQuirkCiXpmt)) {
+        if (currentServerM.IsQuirk(cSatipServer::eSatipQuirkCiXpmt) && pidsM.Size() > 0) {
            // CI extension parameters:
-           // - x_pmt : specifies the PMT of the service you want the CI to decode
-           // - x_ci  : specfies which CI slot (1..n) to use
-           //           value 0 releases the CI slot
-           //           CI slot released automatically if the stream is released,
-           //           but not when used retuning to another channel
-           int pid = deviceM->GetPmtPid();
-           if ((pid > 0) && (pid != pmtPidM)) {
-              int slot = deviceM->GetCISlot();
-              uri = cString::sprintf("%s%sx_pmt=%d", *uri, paramadded ? "&" : "?", pid);
-              if (slot > 0)
-                 uri = cString::sprintf("%s&x_ci=%d", *uri, slot);
-              paramadded = true;
+           // - x_pmt : specifies the PMT of the service you want the CI to decode,
+           //           multiple PMTs are separated by comma.
+           //           If a stream was started without x_pmt the CI
+           //           is not active and cannot be attached later.
+           //           Close the session and restart with x_pmt.
+           // - x_ci  : optional, specifies which CI slot (1..n) to use
+           //           if omitted the next free CI will be used
+           //           the CI slot is released automatically if the stream is torn down,
+           //           but not when retuning to another channel
+           if (pmtPids.Size() > 0) {
+              isyslog("cSatipTuner::UpdatePids(%s) pids: %d=%s pmtPids: %d=%s addPids: %d=%s delPids %d=%s timedOut=%s (%dms+%ldms) pmtTimeout=%ld baseURL='%s' streamId=%d [device %d]", forceP ? "forced" : "timeout", pidsM.Size(), *pidsM.ListPids(), pmtPids.Size(), *pmtPids.ListPids(), addPidsM.Size(), *addPidsM.ListPids(), delPidsM.Size(), *delPidsM.ListPids(), pidUpdateCacheM.TimedOut()?"yes":"no", ePidUpdateIntervalMs, pidUpdateCacheM.Elapsed(), pmtPidLinger.Elapsed(), *baseURL, streamIdM, deviceIdM);
+              if (pmtPidLinger.TimedOut()) {
+                 for (int i = 0; i < pmtPids.Size(); i++)
+                    if (pmtPids.Size() > 1 && pidsM.IndexOf(pmtPids[i]) == -1) { // do not delete last Pid
+                       isyslog("cSatipTuner::UpdatePids(): deleting pmtPid %d", pmtPids[i]);
+                       pmtPids.RemovePid(pmtPids[i]);
+                    }
+                 pmtPidLinger.Set(30000);
               }
-           pmtPidM = pid;
+              uri = cString::sprintf("%s%sx_pmt=%s", *uri, paramadded ? "&" : "?", *pmtPids.ListPids());
+              paramadded = true;
            }
+        }
         else if (currentServerM.IsQuirk(cSatipServer::eSatipQuirkCiTnr)) {
            // CI extension parameters:
            // - tnr : specifies a channel config entry
@@ -558,11 +584,18 @@ bool cSatipTuner::UpdatePids(bool forceP)
         }
      if (paramadded) {
         pidUpdateCacheM.Set(ePidUpdateIntervalMs);
+        isyslog("cSatipTuner::UpdatePids(%s) PLAY '%s' [device %d]", forceP ? "forced" : "timeout", *uri, deviceIdM);
         if (!rtspM.Play(*uri))
            return false;
         }
      addPidsM.Clear();
      delPidsM.Clear();
+     }
+
+     if (streamIdM == -1) {
+        isyslog("cSatipTuner::UpdatePids() ERROR: Pids in empty Stream: add:%s del:%s", *addPidsM.ListPids(), *delPidsM.ListPids());
+        addPidsM.Clear();
+        delPidsM.Clear();
      }
 
   return true;

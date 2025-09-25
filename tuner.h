@@ -29,12 +29,11 @@ private:
 public:
   void RemovePid(const int &pidP)
   {
-    if (RemoveElement(pidP))
-       Sort(PidCompare);
+    RemoveElement(pidP);
   }
-  void AddPid(int pidP)
+  void AddPid(int pidP, bool sort = true)
   {
-    if (AppendUnique(pidP))
+    if (AppendUnique(pidP) && sort)
        Sort(PidCompare);
   }
   cString ListPids(void)
@@ -92,7 +91,8 @@ private:
     eTuningTimeoutMs          = 20000, // in milliseconds
     eMinKeepAliveIntervalMs   = 30000, // in milliseconds
     eKeepAlivePreBufferMs     = 2000,  // in milliseconds
-    eSetupTimeoutMs           = 2000   // in milliseconds
+    eSetupTimeoutMs           = 2000,  // in milliseconds
+    ePmtPidLingerTime         = 2000   // in milliseconds
   };
   enum eTunerState { tsIdle, tsRelease, tsSet, tsTuned, tsLocked };
   enum eStateMode { smInternal, smExternal };
@@ -116,6 +116,7 @@ private:
   cTimeMs statusUpdateM;
   cTimeMs pidUpdateCacheM;
   cTimeMs setupTimeoutM;
+  cTimeMs pmtPidLinger;
   cString sessionM;
   eTunerState currentStateM;
   cVector<eTunerState> internalStateM;
@@ -127,10 +128,11 @@ private:
   int signalQualityM;
   int frontendIdM;
   int streamIdM;
-  int pmtPidM;
   cSatipPid addPidsM;
   cSatipPid delPidsM;
   cSatipPid pidsM;
+  cSatipPid pmtPids;
+  bool needsReconnect;
 
   bool Connect(void);
   bool Disconnect(void);
@@ -152,8 +154,11 @@ public:
   cSatipTuner(cSatipDeviceIf &deviceP, unsigned int packetLenP);
   virtual ~cSatipTuner();
   bool IsTuned(void) const { return (currentStateM >= tsTuned); }
-  bool SetSource(cSatipServer *serverP, const int transponderP, const char *parameterP, const int indexP);
-  bool SetPid(int pidP, int typeP, bool onP);
+  bool SetSource(cSatipServer *serverP, const int transponderP, const char *parameterP, const int indexP, const bool NeedsReconnect = false);
+  bool SetPid(int pidP, int typeP, bool Add);
+  void AddPmtPid(int pmtPid) { pmtPids.AddPid(pmtPid, false); }
+  void ClearPmtPids(void) { pmtPids.Clear(); }
+  cString GetPmtPidList() { return pmtPids.ListPids(); }
   bool Open(void);
   bool Close(void);
   int FrontendId(void);

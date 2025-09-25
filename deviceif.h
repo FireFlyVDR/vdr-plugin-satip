@@ -15,8 +15,6 @@ public:
   virtual void WriteData(u_char *bufferP, int lengthP) = 0;
   virtual void SetChannelTuned(void) = 0;
   virtual int GetId(void) = 0;
-  virtual int GetPmtPid(void) = 0;
-  virtual int GetCISlot(void) = 0;
   virtual cString GetTnrParameterString(void) = 0;
   virtual bool IsIdle(void) = 0;
 

@@ -360,10 +360,8 @@ cSatipPluginSetup::cSatipPluginSetup()
   transportModeTextsM[cSatipConfig::eTransportModeUnicast]    = tr("Unicast");
   transportModeTextsM[cSatipConfig::eTransportModeMulticast]  = tr("Multicast");
   transportModeTextsM[cSatipConfig::eTransportModeRtpOverTcp] = tr("RTP-over-TCP");
-  for (unsigned int i = 0; i < ELEMENTS(cicamsM); ++i)
-      cicamsM[i] = SatipConfig.GetCICAM(i);
-  for (unsigned int i = 0; i < ELEMENTS(ca_systems_table); ++i)
-      cicamTextsM[i] = ca_systems_table[i].description;
+  for (unsigned int i = 0; i < ELEMENTS(ciAssignedDevice); ++i)
+      ciAssignedDevice[i] = SatipConfig.GetCIAssignedDevice(i);
   if (numDisabledSourcesM > MAX_DISABLED_SOURCES_COUNT)
      numDisabledSourcesM = MAX_DISABLED_SOURCES_COUNT;
   for (int i = 0; i < MAX_DISABLED_SOURCES_COUNT; ++i)
@@ -393,10 +391,14 @@ void cSatipPluginSetup::Setup(void)
      Add(new cMenuEditBoolItem(tr("Enable CI extension"), &ciExtensionM));
      helpM.Append(tr("Define whether a CI extension shall be used.\n\nThis setting enables integrated CI/CAM handling found in some SAT>IP hardware (e.g. Digital Devices OctopusNet)."));
 
-     for (unsigned int i = 0; ciExtensionM && i < ELEMENTS(cicamsM); ++i) {
-         Add(new cMenuEditStraItem(*cString::sprintf(" %s #%d", tr("CI/CAM"), i + 1), &cicamsM[i], ELEMENTS(cicamTextsM), cicamTextsM));
-         helpM.Append(tr("Define a desired CAM type for the CI slot.\n\nThe '---' option lets SAT>IP hardware do the auto-selection."));
-         }
+     for (unsigned int i = 0; ciExtensionM && i < SatipConfig.GetDeviceCount(); ++i) {
+        Add(new cMenuEditIntItem(*cString::sprintf("  VDR Device #%d assigned %s", i, tr("CI/CAM")), &ciAssignedDevice[i], 0, MAX_CICAM_COUNT, tr("none")));
+        helpM.Append(tr("Define which CI/CAM is assigned to which VDR device"));
+        if (ciAssignedDevice[i] > 0) {
+           Add(new cOsdItem(*cString::sprintf("    %s #%d\t%s",tr("supported CA IDs of CI/CAM"), ciAssignedDevice[i], *SatipConfig.GetCAIDList(ciAssignedDevice[i]-1)), osUnknown, false));
+           helpM.Append(tr("Show the CA IDs this CI/CAM is able to handle as defined in the plugin parameters"));
+        }
+     }
 
      Add(new cMenuEditBoolItem(tr("Enable EPG scanning"), &eitScanM));
      helpM.Append(tr("Define whether the EPG background scanning shall be used.\n\nThis setting disables the automatic EIT scanning functionality for all SAT>IP devices."));
@@ -484,6 +486,9 @@ eOSState cSatipPluginSetup::ProcessKey(eKeys keyP)
   bool hadSubMenu = HasSubMenu();
   int oldOperatingMode = operatingModeM;
   int oldCiExtension = ciExtensionM;
+  int oldCiAssignedDevice[SATIP_MAX_DEVICES];
+  for (unsigned int i = 0; i < ELEMENTS(oldCiAssignedDevice); ++i)
+    oldCiAssignedDevice[i] = ciAssignedDevice[i];
   int oldFrontendReuse = frontendReuseM;
   int oldNumDisabledSources = numDisabledSourcesM;
   int oldNumDisabledFilters = numDisabledFiltersM;
@@ -510,7 +515,13 @@ eOSState cSatipPluginSetup::ProcessKey(eKeys keyP)
   if ((keyP == kNone) && (cSatipDiscover::GetInstance()->GetServers()->Count() != deviceCountM))
      Setup();
 
-  if ((keyP != kNone) && ((numDisabledSourcesM != oldNumDisabledSources) || (numDisabledFiltersM != oldNumDisabledFilters) || (operatingModeM != oldOperatingMode) || (ciExtensionM != oldCiExtension) || ( oldFrontendReuse != frontendReuseM) || (detachedModeM != SatipConfig.GetDetachedMode()))) {
+  bool CIchanged = false;
+  if (keyP != kNone) {
+     for (unsigned int i = 0; !CIchanged && i < ELEMENTS(ciAssignedDevice); ++i)
+        CIchanged = ciAssignedDevice[i] != oldCiAssignedDevice[i];
+  }
+  if ((keyP != kNone) && ((numDisabledSourcesM != oldNumDisabledSources) || (numDisabledFiltersM != oldNumDisabledFilters) || (operatingModeM != oldOperatingMode) ||
+                          (ciExtensionM != oldCiExtension) || ( oldFrontendReuse != frontendReuseM) || (detachedModeM != SatipConfig.GetDetachedMode() || CIchanged))) {
      while ((numDisabledSourcesM < oldNumDisabledSources) && (oldNumDisabledSources > 0))
            disabledSourcesM[--oldNumDisabledSources] = cSource::stNone;
      while ((numDisabledFiltersM < oldNumDisabledFilters) && (oldNumDisabledFilters > 0))
@@ -521,17 +532,15 @@ eOSState cSatipPluginSetup::ProcessKey(eKeys keyP)
   return state;
 }
 
-void cSatipPluginSetup::StoreCicams(const char *nameP, int *cicamsP)
+void cSatipPluginSetup::StoreCiAssignedDevices(const char *nameP, int *ciAssignedDevice)
 {
   cString buffer = "";
   int n = 0;
-  for (int i = 0; i < MAX_CICAM_COUNT; ++i) {
-      if (cicamsP[i] < 0)
-         break;
+  for (int i = 0; i < SATIP_MAX_DEVICES; ++i) {
       if (n++ > 0)
-         buffer = cString::sprintf("%s %d", *buffer, cicamsP[i]);
+         buffer = cString::sprintf("%s %d", *buffer, ciAssignedDevice[i]);
       else
-         buffer = cString::sprintf("%d", cicamsP[i]);
+         buffer = cString::sprintf("%d", ciAssignedDevice[i]);
       }
   debug3("%s (%s, %s)", __PRETTY_FUNCTION__, nameP, *buffer);
   SetupStore(nameP, *buffer);
@@ -577,7 +586,7 @@ void cSatipPluginSetup::Store(void)
   SetupStore("EnableCIExtension", ciExtensionM);
   SetupStore("EnableFrontendReuse", frontendReuseM);
   SetupStore("EnableEITScan", eitScanM);
-  StoreCicams("CICAM", cicamsM);
+  StoreCiAssignedDevices("CIAssignedDevice", ciAssignedDevice);
   StoreSources("DisabledSources", disabledSourcesM);
   StoreFilters("DisabledFilters", disabledFilterIndexesM);
   // Update global config
@@ -586,7 +595,7 @@ void cSatipPluginSetup::Store(void)
   SatipConfig.SetCIExtension(ciExtensionM);
   SatipConfig.SetEITScan(eitScanM);
   for (int i = 0; i < MAX_CICAM_COUNT; ++i)
-      SatipConfig.SetCICAM(i, cicamsM[i]);
+      SatipConfig.SetCIAssignedDevice(i, ciAssignedDevice[i]);
   for (int i = 0; i < MAX_DISABLED_SOURCES_COUNT; ++i)
       SatipConfig.SetDisabledSources(i, disabledSourcesM[i]);
   for (int i = 0; i < SECTION_FILTER_TABLE_SIZE; ++i)
