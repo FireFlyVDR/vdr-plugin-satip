@@ -81,7 +81,7 @@ public:
   virtual const cChannel *GetCurrentlyTunedTransponder(void) const;
   virtual bool IsTunedToTransponder(const cChannel *channelP) const;
   virtual bool MaySwitchTransponder(const cChannel *channelP) const;
-  virtual void SetPowerSaveMode(bool On) override;
+  virtual void SetPowerSaveMode(bool On);
 
 protected:
   virtual bool SetChannelDevice(const cChannel *channelP, bool liveViewP);
