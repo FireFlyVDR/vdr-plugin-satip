@@ -110,7 +110,7 @@ const char *cPluginSatip::CommandLineHelp(void)
          "                                                       0x20: Support the CI TNR protocol extension\n"
          "                                                       0x40: Fix auto-detection of pilot tones bug\n"
          "                                                       0x80: Fix re-tuning bug by teardowning a session\n"
-         "  -c, --caids=<CAM1_ID1>[,<CAM1_ID2,...];<CAM2_ID1>[,<CAM2_ID2>,...]\n"
+         "  -c, --caids=<CAM1_ID1>[,<CAM1_ID2,...][;<CAM2_ID1>[,<CAM2_ID2>,...]]\n"
          "                                set the CAIDs of up to 4 CAMs\n"
          "  -D, --detach                  set the detached mode on\n"
          "  -S, --single                  set the single model server mode on\n"
@@ -364,7 +364,6 @@ void cPluginSatip::ParsePortRange(const char *paramP)
 void cPluginSatip::ParseCAIDs(const char *valueP)
 {
    debug1("%s (%s)", __PRETTY_FUNCTION__, valueP);
-   isyslog("%s (%s)", __PRETTY_FUNCTION__, valueP);
 
    char *list = strdup(valueP);
    char *next1, *next2;
@@ -375,7 +374,7 @@ void cPluginSatip::ParseCAIDs(const char *valueP)
       char *p2 = strtok_r(p1, ",", &next2);
       while (p2) {
          unsigned int caId = strtoul(p2, NULL, 0);
-         isyslog("CAID CAM%d %d=%04X", camNdx, caIdNdx, caId);
+         info("CAM%d CAID%d=0x%04X", camNdx, caIdNdx, caId);
          SatipConfig.SetCAID(camNdx, caIdNdx, caId);
          p2 = strtok_r(NULL, ",", &next2);
          caIdNdx++;

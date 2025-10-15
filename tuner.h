@@ -156,7 +156,7 @@ public:
   bool IsTuned(void) const { return (currentStateM >= tsTuned); }
   bool SetSource(cSatipServer *serverP, const int transponderP, const char *parameterP, const int indexP, const bool NeedsReconnect = false);
   bool SetPid(int pidP, int typeP, bool Add);
-  void AddPmtPid(int pmtPid) { pmtPids.AddPid(pmtPid, false); }
+  void AddPmtPid(int pmtPid) { pidsM.AddPid(pmtPid); pmtPids.AddPid(pmtPid, false); }
   void ClearPmtPids(void) { pmtPids.Clear(); }
   cString GetPmtPidList() { return pmtPids.ListPids(); }
   bool Open(void);

@@ -392,7 +392,7 @@ void cSatipPluginSetup::Setup(void)
      helpM.Append(tr("Define whether a CI extension shall be used.\n\nThis setting enables integrated CI/CAM handling found in some SAT>IP hardware (e.g. Digital Devices OctopusNet)."));
 
      for (unsigned int i = 0; ciExtensionM && i < SatipConfig.GetDeviceCount(); ++i) {
-        Add(new cMenuEditIntItem(*cString::sprintf("  VDR Device #%d assigned %s", i, tr("CI/CAM")), &ciAssignedDevice[i], 0, MAX_CICAM_COUNT, tr("none")));
+        Add(new cMenuEditIntItem(*cString::sprintf(tr("  VDR Device #%d assigned CI/CAM"), i), &ciAssignedDevice[i], 0, MAX_CICAM_COUNT, tr("none")));
         helpM.Append(tr("Define which CI/CAM is assigned to which VDR device"));
         if (ciAssignedDevice[i] > 0) {
            Add(new cOsdItem(*cString::sprintf("    %s #%d\t%s",tr("supported CA IDs of CI/CAM"), ciAssignedDevice[i], *SatipConfig.GetCAIDList(ciAssignedDevice[i]-1)), osUnknown, false));
