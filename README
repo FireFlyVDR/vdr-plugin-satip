@@ -88,6 +88,17 @@ be used to manually specify the RTP & RTCP port range and therefore
 enables using the plugin through a NAT (e.g. Docker bridged network).
 A minimum of 2 ports per device is required.
 
+If you want to use the CI slot(s) of the OctopusNet you need to define
+the CA IDs supported by each slot with the "--caids" parameter. Multiple
+CA IDs per slot can be given separated by comma, multiple slots are
+separated by semicolon:
+--caids=<CAM1_ID1>[,<CAM1_ID2,...][;<CAM2_ID1>[,<CAM2_ID2>,...];....]
+
+Example for CA ID 0x1000 in slot 1 and 0x2000 and 0x2020 in slot 2:
+--caids=0x1000;0x2000,0x2020
+Additionally in the plugins settings you need enable the "Use CI extension" and
+define the VDR device(s) the CI slot(s)s will be attached to.
+
 SAT>IP satellite positions (aka. signal sources) shall be defined via
 sources.conf. If the source description begins with a number, it's used
 as SAT>IP signal source selection parameter. A special number zero can
@@ -112,57 +123,61 @@ Valid range: 1 ... 99
 
 Setup menu:
 
-- Operating mode = off        If you want exclude all SAT>IP devices
-                   low        from VDR's device handling, set this
-                   normal     option to "off". Otherwise, if you want
-                   high       to keep SAT>IP at a low priority when
-                              selecting available devices, set this
-                              option to "low". Similarly, the "high"
-                              value prefers the SAT>IP over the local
-                              DVB cards when selecting available devices.
-- Use CI extension = no       If you want to use the CI extension found
-                              in some SAT>IP hardware (e.g. Digital
-                              Devices OctopusNet), set this option to
-                              "yes".
-- CICAM #<slot> = <system>    If you want to assign a CA system into
-                              a specific CI slot, set this option to
-                              a named one. Use "---" for autoselection.
-- Enable EPG scanning = yes   If you want exclude all SAT>IP devices
-                              from VDR's EIT background scanning, set
-                              this option to "no".
-- Disabled sources = none     If your SAT>IP servers don't have certain
-                              satellite positions available you can
-                              disable them via this option.
-- Disabled filters = none     Certain section filters might cause some
-                              unwanted behaviour to VDR such as time
-                              being falsely synchronized etc. This option
-                              allows creation of blacklists of ill-behaving
-                              filters. If this option is set to a non-zero
-                              value, the menu page will contain that many
-                              "Disable filter" options which allow you
-                              to disable the individual section filters.
-                              Valid range: "none" = 0 ... 7
-- Transport mode = unicast    If you want to use the non-standard
-                   multicast  RTP-over-TCP transport mode, set this option
-                   rtp-o-tcp  accordingly. Otherwise, the transport
-                              mode will be RTP-over-UDP via unicast or
-                              multicast.
-- Enable frontend reuse = yes Certain devices might have artifacts if
-                              multiple channels are assigned to the same
-                              frontend. If you want to avoid such a
-                              frontend assignment, set this option to "no". 
-- [Red:Scan]                  Forces network scanning of SAT>IP hardware.
-- [Yellow:Devices]            Opens SAT>IP device status menu.
-- [Blue:Info]                 Opens SAT>IP information/statistics menu.
-- [Ok]                        Opens information menu of selected SAT>IP
-                              device.
+- Operating mode = off            If you want exclude all SAT>IP devices
+                   low            from VDR's device handling, set this
+                   normal         option to "off". Otherwise, if you want
+                   high           to keep SAT>IP at a low priority when
+                                  selecting available devices, set this
+                                  option to "low". Similarly, the "high"
+                                  value prefers the SAT>IP over the local
+                                  DVB cards when selecting available devices.
+- Use CI extension = no           If you want to use the CI extension found
+                                  in some SAT>IP hardware (e.g. Digital
+                                  Devices OctopusNet), set this option to
+                                  "yes".
+-  VDR Device # assigned CI/CAM   if "Use CI extension" is enabled you need to
+                                  assign here a CI/CAM to a VDR Device
+-   supported CA IDs of CI/CAM #  readonly, displays the configured CA IDs of
+                                  the CI slot above if an CI/CAM is assinged
+- Enable EPG scanning = yes       If you want exclude all SAT>IP devices
+                                  from VDR's EIT background scanning, set
+                                  this option to "no".
+- Disabled sources = none         If your SAT>IP servers don't have certain
+                                  satellite positions available you can
+                                  disable them via this option.
+- Disabled filters = none         Certain section filters might cause some
+                                  unwanted behaviour to VDR such as time
+                                  being falsely synchronized etc. This option
+                                  allows creation of blacklists of ill-behaving
+                                  filters. If this option is set to a non-zero
+                                  value, the menu page will contain that many
+                                  "Disable filter" options which allow you
+                                  to disable the individual section filters.
+                                  Valid range: "none" = 0 ... 7
+- Transport mode = unicast        If you want to use the non-standard
+                   multicast      RTP-over-TCP transport mode, set this option
+                   rtp-o-tcp      accordingly. Otherwise, the transport
+                                  mode will be RTP-over-UDP via unicast or
+                                  multicast.
+- Enable frontend reuse = yes     Certain devices might have artifacts if
+                                  multiple channels are assigned to the same
+                                  frontend. If you want to avoid such a
+                                  frontend assignment, set this option to "no".
+                                  For receiving multiple channels of one
+                                  transponder with one CI/CAM you need to set
+                                  this option to "yes".
+- [Red:Scan]                      Forces network scanning of SAT>IP hardware.
+- [Yellow:Devices]                Opens SAT>IP device status menu.
+- [Blue:Info]                     Opens SAT>IP information/statistics menu.
+- [Ok]                            Opens information menu of selected SAT>IP
+                                  device.
 
 Information menu:
 
-- [Red:General]              Opens the general information page.
-- [Green:Pids]               Opens the pid statistics page.
-- [Yellow:Filters]           Opens the section filter statistics page.
-- [Blue:Bits/bytes]          Toggles between bits and bytes mode.
+- [Red:General]                  Opens the general information page.
+- [Green:Pids]                   Opens the pid statistics page.
+- [Yellow:Filters]               Opens the section filter statistics page.
+- [Blue:Bits/bytes]              Toggles between bits and bytes mode.
 
 Notes:
 
@@ -182,7 +197,7 @@ Notes:
 - Tracing can be set on/off dynamically via command-line switch or
   SVDRP command.
 
-- OctopusNet firmware 1.0.40 or greater recommended.
+- For OctopusNet firmware version 2.0 or greater recommended.
 
 - Inverto OEM firmware 1.17.0.120 or greater recommended.
   The firmware 1.16.0.120 can be downloaded and installed

@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: vdr-satip 2.4.0\n"
 "Report-Msgid-Bugs-To: <see README>\n"
-"POT-Creation-Date: 2019-10-27 19:12+0200\n"
+"POT-Creation-Date: 2025-10-14 11:29+0200\n"
 "PO-Revision-Date:  2019-10-27 10:27+0200\n"
 "Last-Translator: Frank Neumann <fnu@yavdr.org>\n"
 "Language-Team: German <vdr@linuxtv.org>\n"
@@ -127,17 +127,21 @@ msgstr ""
 "\n"
 "Diese Einstellung aktiviert die Nutzung des integrierten CI/CAM einiger SAT>IP Geräte (z.B. Digital Devices OctopusNet)."
 
-msgid "CI/CAM"
-msgstr "CI/CAM"
+#, c-format
+msgid "  VDR Device #%d assigned CI/CAM"
+msgstr "  VDR Device #%d zugewiesen zu CI/CAM"
 
-msgid ""
-"Define a desired CAM type for the CI slot.\n"
-"\n"
-"The '---' option lets SAT>IP hardware do the auto-selection."
-msgstr ""
-"Bestimmt welcher CI Einschub für ein CAM genutzt werden soll.\n"
-"\n"
-"Die Option '---' überlässt der SAT>IP Hardware die automatische Auswahl."
+msgid "none"
+msgstr "keine"
+
+msgid "Define which CI/CAM is assigned to which VDR device"
+msgstr "Definiert welches CI/CAM welchem VDR Device zugewiesen ist"
+
+msgid "supported CA IDs of CI/CAM"
+msgstr "unterstützte CA IDs des CI/CAM"
+
+msgid "Show the CA IDs this CI/CAM is able to handle as defined in the plugin parameters"
+msgstr "Zeige die CA IDs die dieses CI/CAM unterstützt wie in den Plugin-Parametern angegeben"
 
 msgid "Enable EPG scanning"
 msgstr "Aktiviere EPG Aktualisierung"
@@ -153,9 +157,6 @@ msgstr ""
 
 msgid "Disabled sources"
 msgstr "Deaktivierte Quellen"
-
-msgid "none"
-msgstr "keine"
 
 msgid ""
 "Define number of sources to be disabled.\n"
@@ -210,3 +211,15 @@ msgstr "Aktive SAT>IP Server:"
 
 msgid "Help"
 msgstr "Hilfe"
+
+#~ msgid "CI/CAM"
+#~ msgstr "CI/CAM"
+
+#~ msgid ""
+#~ "Define a desired CAM type for the CI slot.\n"
+#~ "\n"
+#~ "The '---' option lets SAT>IP hardware do the auto-selection."
+#~ msgstr ""
+#~ "Bestimmt welcher CI Einschub für ein CAM genutzt werden soll.\n"
+#~ "\n"
+#~ "Die Option '---' überlässt der SAT>IP Hardware die automatische Auswahl."
