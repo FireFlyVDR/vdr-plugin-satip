@@ -23,7 +23,7 @@ private:
   const char *transportModeTextsM[cSatipConfig::eTransportModeCount];
   int ciExtensionM;
   int frontendReuseM;
-  int cicamsM[MAX_CICAM_COUNT];
+  int ciAssignedDevice[SATIP_MAX_DEVICES];
   const char *cicamTextsM[CA_SYSTEMS_TABLE_SIZE];
   int eitScanM;
   int numDisabledSourcesM;
@@ -38,7 +38,7 @@ private:
   eOSState ShowDeviceStatus(void);
   eOSState ShowInfo(void);
   void Setup(void);
-  void StoreCicams(const char *nameP, int *cicamsP);
+  void StoreCiAssignedDevices(const char *nameP, int *ciAssignedDevice);
   void StoreSources(const char *nameP, int *sourcesP);
   void StoreFilters(const char *nameP, int *valuesP);
 

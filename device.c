@@ -17,20 +17,23 @@ static cSatipDevice * SatipDevicesS[SATIP_MAX_DEVICES] = { NULL };
 
 cMutex cSatipDevice::mutexDevicesS = cMutex();
 
-cSatipDevice::cSatipDevice(unsigned int indexP)
+cSatipDevice::cSatipDevice(unsigned int indexP, int CiSlot)
 : deviceIndexM(indexP),
   bytesDeliveredM(0),
   isOpenDvrM(false),
   checkTsBufferM(false),
+  ciSlot(CiSlot),
   deviceNameM(*cString::sprintf("%s %d", *DeviceType(), deviceIndexM)),
   channelM(),
+  channelIsEncr(false),
   pTunerM(NULL),
   createdM(0),
   tunedM()
 {
   unsigned int bufsize = (unsigned int)SATIP_BUFFER_SIZE;
   bufsize -= (bufsize % TS_SIZE);
-  info("Creating device CardIndex=%d DeviceNumber=%d [device %u]", CardIndex(), DeviceNumber(), deviceIndexM);
+  info("Creating device CardIndex=%d DeviceNumber=%d %s%s[%s device %u]", CardIndex(), DeviceNumber(), ciSlot > 0 ? "with CI Slot " : "", ciSlot > 0 ? *itoa(ciSlot) : "", *deviceNameM, deviceIndexM);
+
   tsBufferM = new cRingBufferLinear(bufsize + 1, TS_SIZE, false,
                                    *cString::sprintf("SATIP#%d TS", deviceIndexM));
   if (tsBufferM) {
@@ -60,8 +63,9 @@ bool cSatipDevice::Initialize(unsigned int deviceCountP)
   debug1("%s (%u)", __PRETTY_FUNCTION__, deviceCountP);
   if (deviceCountP > SATIP_MAX_DEVICES)
      deviceCountP = SATIP_MAX_DEVICES;
+  SatipConfig.SetDeviceCount(deviceCountP);
   for (unsigned int i = 0; i < deviceCountP; ++i)
-      SatipDevicesS[i] = new cSatipDevice(i);
+      SatipDevicesS[i] = new cSatipDevice(i, SatipConfig.GetCIAssignedDevice(i));
   for (unsigned int i = deviceCountP; i < SATIP_MAX_DEVICES; ++i)
       SatipDevicesS[i] = NULL;
   return true;
@@ -289,17 +293,27 @@ bool cSatipDevice::ProvidesChannel(const cChannel *channelP, int priorityP, bool
         if (Receiving()) {
            if (IsTunedToTransponder(channelP)) {
               if (channelP->Vpid() && !HasPid(channelP->Vpid()) || channelP->Apid(0) && !HasPid(channelP->Apid(0)) || channelP->Dpid(0) && !HasPid(channelP->Dpid(0))) {
-                 if (CamSlot() && channelP->Ca() >= CA_ENCRYPTED_MIN) {
-                    if (CamSlot()->CanDecrypt(channelP))
+                 if (channelP->Ca() >= CA_ENCRYPTED_MIN) {
+                    if (SatipConfig.GetCIExtension() && ciSlot > 0 && ProvidesCa(channelP->Caids()))
                        result = true;
                     else
-                       needsDetachReceivers = true;
+                    {
+                       if (CamSlot())
+                       {
+                          if (CamSlot()->CanDecrypt(channelP))
+                             result = true;
+                          else
+                             needsDetachReceivers = true;
+                       }
                     }
+                 }
                  else
+                 {
                     result = true;
                  }
+              }
               else
-                 result = !!SatipConfig.GetFrontendReuse();
+                 result = SatipConfig.GetFrontendReuse() > 0;
               }
            else
               needsDetachReceivers = true;
@@ -309,6 +323,22 @@ bool cSatipDevice::ProvidesChannel(const cChannel *channelP, int priorityP, bool
   if (needsDetachReceiversP)
      *needsDetachReceiversP = needsDetachReceivers;
   return result;
+}
+
+bool cSatipDevice::ProvidesCa(const int *ChannelCAIds) const
+{
+   if (ciSlot > 0) {
+      for (unsigned int camNdx = 0; camNdx < MAX_CICAM_COUNT; camNdx++) {
+         // use only assigned CI
+         for (const int *ids = SatipConfig.GetProvidedCAIds(camNdx); ids && *ids; ids++) {
+            for (const int *id = ChannelCAIds; *id; id++) {
+               if (*id == *ids)
+                  return true;
+            }
+         }
+     }
+  }
+  return false;
 }
 
 bool cSatipDevice::ProvidesEIT(void) const
@@ -345,7 +375,7 @@ bool cSatipDevice::IsTunedToTransponder(const cChannel *channelP) const
 {
   if (pTunerM && !pTunerM->IsTuned())
      return false;
-  if ((channelM.Source() != channelP->Source()) || (channelM.Transponder() != channelP->Transponder()))
+  if ((channelM.Source() != channelP->Source()) || !ISTRANSPONDER(channelM.Transponder(), channelP->Transponder()))
      return false;
   return (strcmp(channelM.Parameters(), channelP->Parameters()) == 0);
 }
@@ -353,6 +383,11 @@ bool cSatipDevice::IsTunedToTransponder(const cChannel *channelP) const
 bool cSatipDevice::MaySwitchTransponder(const cChannel *channelP) const
 {
   return cDevice::MaySwitchTransponder(channelP);
+}
+
+void cSatipDevice::SetPowerSaveMode(bool On)
+{
+  debug9("%s (%s) [device %u]", __PRETTY_FUNCTION__, On?"On":"Off", deviceIndexM);
 }
 
 bool cSatipDevice::SetChannelDevice(const cChannel *channelP, bool liveViewP)
@@ -366,13 +401,33 @@ bool cSatipDevice::SetChannelDevice(const cChannel *channelP, bool liveViewP)
         error("Unrecognized channel parameters: %s [device %u]", channelP->Parameters(), deviceIndexM);
         return false;
         }
+
      cSatipServer *server = cSatipDiscover::GetInstance()->AssignServer(deviceIndexM, channelP->Source(), channelP->Transponder(), dtp.System());
      if (!server) {
         debug9("%s No suitable server found [device %u]", __PRETTY_FUNCTION__, deviceIndexM);
         return false;
         }
-     if (pTunerM && pTunerM->SetSource(server, channelP->Transponder(), *params, deviceIndexM)) {
+     bool useCI = SatipConfig.GetCIExtension() && ciSlot > 0 && channelP->Ca() >= CA_ENCRYPTED_MIN;
+     int pmtPid = channelP->Ca() ? ::GetPmtPid(channelP->Source(), channelP->Transponder(), channelP->Sid()) : 0;
+     bool reconnect = false;
+
+     if (useCI && cSatipDiscover::GetInstance()->IsServerQuirk(server, cSatipServer::eSatipQuirkCiXpmt)) {
+        bool TPchange = channelM.Transponder() > 0 && (channelM.Source() != channelP->Source() || !ISTRANSPONDER(channelM.Transponder(), channelP->Transponder()));
+        if (TPchange && ciSlot > 0)
+           pTunerM->ClearPmtPids();
+
+        reconnect = channelM.Transponder() > 0 && (channelIsEncr != (channelP->Ca() >= CA_ENCRYPTED_MIN && pmtPid > 0));
+        debug11("%s CA: %d => %d (%d) %s [device %u]", __PRETTY_FUNCTION__, int(channelIsEncr), int(channelP->Ca() >= CA_ENCRYPTED_MIN), int(channelP->Ca() >= CA_ENCRYPTED_MIN && pmtPid > 0), reconnect ? "changed" : "same",deviceIndexM);
+        if (pmtPid > 0) {
+           pTunerM->AddPmtPid(pmtPid);
+           params.Append(*cString::sprintf("&addpids=%d&x_pmt=%s&x_ci=%d", pmtPid, *pTunerM->GetPmtPidList(), ciSlot));
+        }
+        debug11("%s '%s:%d' '%s' pmtPids=%s [device %u]", __PRETTY_FUNCTION__, *channelP->GetChannelID().ToString(), pmtPid, channelP->Name(), *pTunerM->GetPmtPidList(), deviceIndexM);
+     }
+
+     if (pTunerM && pTunerM->SetSource(server, channelP->Transponder(), *params, deviceIndexM, reconnect)) {
         channelM = *channelP;
+        channelIsEncr = channelP->Ca() >= CA_ENCRYPTED_MIN && pmtPid > 0;
         deviceNameM = cString::sprintf("%s %d %s", *DeviceType(), deviceIndexM, *cSatipDiscover::GetInstance()->GetServerString(server));
         // Wait for actual channel tuning to prevent simultaneous frontend allocation failures
         tunedM.TimedWait(mutexDevicesS, eTuningTimeoutMs);
@@ -465,7 +520,7 @@ bool cSatipDevice::HasLock(int timeoutMsP) const
 bool cSatipDevice::HasInternalCam(void)
 {
   debug16("%s [device %u]", __PRETTY_FUNCTION__, deviceIndexM);
-  return SatipConfig.GetCIExtension();
+  return SatipConfig.GetCIExtension() && ciSlot > 0;
 }
 
 void cSatipDevice::WriteData(uchar *bufferP, int lengthP)
@@ -482,48 +537,11 @@ void cSatipDevice::WriteData(uchar *bufferP, int lengthP)
      pSectionFilterHandlerM->Write(bufferP, lengthP);
 }
 
-int cSatipDevice::GetId(void)
-{
-  return deviceIndexM;
-}
-
-int cSatipDevice::GetPmtPid(void)
-{
-  int pid = channelM.Ca() ? ::GetPmtPid(channelM.Source(), channelM.Transponder(), channelM.Sid()) : 0;
-  debug11("%s pmtpid=%d source=%c transponder=%d sid=%d name=%s [device %u]", __PRETTY_FUNCTION__, pid, cSource::ToChar(channelM.Source()), channelM.Transponder(), channelM.Sid(), channelM.Name(), deviceIndexM);
-  return pid;
-}
-
-int cSatipDevice::GetCISlot(void)
-{
-  int slot = 0;
-  int ca = 0;
-  for (const int *id = channelM.Caids(); *id; ++id) {
-      if (checkCASystem(SatipConfig.GetCICAM(0), *id)) {
-         ca = *id;
-         slot = 1;
-         break;
-         }
-      else if (checkCASystem(SatipConfig.GetCICAM(1), *id)) {
-         ca = *id;
-         slot = 2;
-         break;
-         }
-      }
-  debug11("%s slot=%d ca=%X name=%s [device %u]", __PRETTY_FUNCTION__, slot, ca, channelM.Name(), deviceIndexM);
-  return slot;
-}
-
 cString cSatipDevice::GetTnrParameterString(void)
 {
    if (channelM.Ca())
       return GetTnrUrlParameters(&channelM);
    return NULL;
-}
-
-bool cSatipDevice::IsIdle(void)
-{
-  return !Receiving();
 }
 
 uchar *cSatipDevice::GetData(int *availableP, bool checkTsBuffer)

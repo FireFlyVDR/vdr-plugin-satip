@@ -36,6 +36,7 @@ private:
   unsigned int deviceCountM;
   cSatipDiscoverServers *serversM;
   void ParseServer(const char *paramP);
+  void ParseCAIDs(const char *paramP);
   void ParsePortRange(const char *paramP);
   int ParseCicams(const char *valueP, int *cicamsP);
   int ParseSources(const char *valueP, int *sourcesP);
@@ -109,6 +110,8 @@ const char *cPluginSatip::CommandLineHelp(void)
          "                                                       0x20: Support the CI TNR protocol extension\n"
          "                                                       0x40: Fix auto-detection of pilot tones bug\n"
          "                                                       0x80: Fix re-tuning bug by teardowning a session\n"
+         "  -c, --caids=<CAM1_ID1>[,<CAM1_ID2,...][;<CAM2_ID1>[,<CAM2_ID2>,...]]\n"
+         "                                set the CAIDs of up to 4 CAMs\n"
          "  -D, --detach                  set the detached mode on\n"
          "  -S, --single                  set the single model server mode on\n"
          "  -n, --noquirks                disable autodetection of the server quirks\n"
@@ -126,6 +129,7 @@ bool cPluginSatip::ProcessArgs(int argc, char *argv[])
     { "devices",      required_argument, NULL, 'd' },
     { "trace",        required_argument, NULL, 't' },
     { "server",       required_argument, NULL, 's' },
+    { "caids",    required_argument, NULL, 'c' },
     { "portrange",    required_argument, NULL, 'p' },
     { "rcvbuf",       required_argument, NULL, 'r' },
     { "detach",       no_argument,       NULL, 'D' },
@@ -136,6 +140,7 @@ bool cPluginSatip::ProcessArgs(int argc, char *argv[])
     };
 
   cString server;
+  cString caids;
   cString portrange;
   int c;
   while ((c = getopt_long(argc, argv, "d:t:s:p:r:DSn", long_options, NULL)) != -1) {
@@ -148,6 +153,9 @@ bool cPluginSatip::ProcessArgs(int argc, char *argv[])
            break;
       case 's':
            server = optarg;
+           break;
+      case 'c':
+           caids = optarg;
            break;
       case 'D':
            SatipConfig.SetDetachedMode(true);
@@ -176,6 +184,8 @@ bool cPluginSatip::ProcessArgs(int argc, char *argv[])
   // this must be done after all parameters are parsed
   if (!isempty(*server))
      ParseServer(*server);
+  if (!isempty(*caids))
+     ParseCAIDs(*caids);
   return true;
 }
 
@@ -351,6 +361,31 @@ void cPluginSatip::ParsePortRange(const char *paramP)
   SatipConfig.SetPortRangeStop(rangeStop);
 }
 
+void cPluginSatip::ParseCAIDs(const char *valueP)
+{
+   debug1("%s (%s)", __PRETTY_FUNCTION__, valueP);
+
+   char *list = strdup(valueP);
+   char *next1, *next2;
+   int camNdx = 0;
+   char *p1 = strtok_r(list, ";", &next1);
+   while (p1) {
+      int caIdNdx = 0;
+      char *p2 = strtok_r(p1, ",", &next2);
+      while (p2) {
+         unsigned int caId = strtoul(p2, NULL, 0);
+         info("CAM%d CAID%d=0x%04X", camNdx, caIdNdx, caId);
+         SatipConfig.SetCAID(camNdx, caIdNdx, caId);
+         p2 = strtok_r(NULL, ",", &next2);
+         caIdNdx++;
+      }
+      p1 = strtok_r(NULL, ";", &next1);
+      camNdx++;
+   }
+
+   free(list);
+}
+
 int cPluginSatip::ParseCicams(const char *valueP, int *cicamsP)
 {
   debug1("%s (%s,)", __PRETTY_FUNCTION__, valueP);
@@ -415,12 +450,15 @@ bool cPluginSatip::SetupParse(const char *nameP, const char *valueP)
   else if (!strcasecmp(nameP, "EnableFrontendReuse"))
      SatipConfig.SetFrontendReuse(atoi(valueP));
   else if (!strcasecmp(nameP, "CICAM")) {
-     int Cicams[MAX_CICAM_COUNT];
-     for (unsigned int i = 0; i < ELEMENTS(Cicams); ++i)
-         Cicams[i] = 0;
-     unsigned int CicamsCount = ParseCicams(valueP, Cicams);
+     // ignored
+     }
+  else if (!strcasecmp(nameP, "CIAssignedDevice")) {
+     int ciAssignedDevice[MAX_CICAM_COUNT];
+     for (unsigned int i = 0; i < ELEMENTS(ciAssignedDevice); ++i)
+         ciAssignedDevice[i] = -1;
+     unsigned int CicamsCount = ParseCicams(valueP, ciAssignedDevice);
      for (unsigned int i = 0; i < CicamsCount; ++i)
-         SatipConfig.SetCICAM(i, Cicams[i]);
+         SatipConfig.SetCIAssignedDevice(i, ciAssignedDevice[i]);
      }
   else if (!strcasecmp(nameP, "EnableEITScan"))
      SatipConfig.SetEITScan(atoi(valueP));

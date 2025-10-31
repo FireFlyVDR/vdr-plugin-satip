@@ -32,7 +32,8 @@
 #define MAX_DISABLED_SOURCES_COUNT       25
 #define SECTION_FILTER_TABLE_SIZE        5
 
-#define MAX_CICAM_COUNT                  2
+#define MAX_CICAM_COUNT                  4
+#define MAX_CAID_COUNT                   4
 #define CA_SYSTEMS_TABLE_SIZE            47
 
 #define SATIP_CURL_EASY_GETINFO(X, Y, Z) \

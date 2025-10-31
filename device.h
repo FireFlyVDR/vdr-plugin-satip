@@ -35,8 +35,10 @@ private:
   int bytesDeliveredM;
   bool isOpenDvrM;
   bool checkTsBufferM;
+  int ciSlot;
   cString deviceNameM;
   cChannel channelM;
+  bool channelIsEncr;
   cRingBufferLinear *tsBufferM;
   cSatipTuner *pTunerM;
   cSatipSectionFilterHandler *pSectionFilterHandlerM;
@@ -45,7 +47,7 @@ private:
 
   // constructor & destructor
 public:
-  explicit cSatipDevice(unsigned int deviceIndexP);
+  explicit cSatipDevice(unsigned int deviceIndexP, int CiSlot);
   virtual ~cSatipDevice();
   cString GetInformation(unsigned int pageP = SATIP_DEVICE_INFO_ALL);
 
@@ -73,15 +75,17 @@ public:
 public:
   virtual bool ProvidesSource(int sourceP) const;
   virtual bool ProvidesTransponder(const cChannel *channelP) const;
-  virtual bool ProvidesChannel(const cChannel *channelP, int priorityP = -1, bool *needsDetachReceiversP = NULL) const;
+  virtual bool ProvidesChannel(const cChannel *channelP, int priorityP = IDLEPRIORITY, bool *needsDetachReceiversP = NULL) const;
   virtual bool ProvidesEIT(void) const;
   virtual int NumProvidedSystems(void) const;
   virtual const cChannel *GetCurrentlyTunedTransponder(void) const;
   virtual bool IsTunedToTransponder(const cChannel *channelP) const;
   virtual bool MaySwitchTransponder(const cChannel *channelP) const;
+  virtual void SetPowerSaveMode(bool On);
 
 protected:
   virtual bool SetChannelDevice(const cChannel *channelP, bool liveViewP);
+  virtual bool ProvidesCa(const int *ChannelCAIds) const;
 
   // for recording
 private:
@@ -111,11 +115,9 @@ public:
 public:
   virtual void WriteData(u_char *bufferP, int lengthP);
   virtual void SetChannelTuned(void);
-  virtual int GetId(void);
-  virtual int GetPmtPid(void);
-  virtual int GetCISlot(void);
+  virtual int GetId(void) { return deviceIndexM; };
   virtual cString GetTnrParameterString(void);
-  virtual bool IsIdle(void);
+  virtual bool IsIdle(void) { return !Receiving(); };
 };
 
 #endif // __SATIP_DEVICE_H

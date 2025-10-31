@@ -27,23 +27,48 @@ cSatipConfig::cSatipConfig(void)
   useSingleModelServersM(false),
   rtpRcvBufSizeM(0)
 {
-  for (unsigned int i = 0; i < ELEMENTS(cicamsM); ++i)
-      cicamsM[i] = 0;
+  for (unsigned int i = 0; i < MAX_CICAM_COUNT; ++i)
+     for (unsigned int j = 0; j <= MAX_CAID_COUNT; ++j)
+        providedCAIds[i][j] = 0;
+  for (unsigned int i = 0; i < ELEMENTS(ciAssignedDevice); ++i)
+      ciAssignedDevice[i] = 0;
   for (unsigned int i = 0; i < ELEMENTS(disabledSourcesM); ++i)
       disabledSourcesM[i] = cSource::stNone;
   for (unsigned int i = 0; i < ELEMENTS(disabledFiltersM); ++i)
       disabledFiltersM[i] = -1;
 }
 
-int cSatipConfig::GetCICAM(unsigned int indexP) const
+int cSatipConfig::GetCAID(unsigned int camIndex, unsigned int CAIDIndex) const
 {
-  return (indexP < ELEMENTS(cicamsM)) ? cicamsM[indexP] : -1;
+  return (camIndex < MAX_CICAM_COUNT ? (CAIDIndex < MAX_CAID_COUNT ? providedCAIds[camIndex][CAIDIndex] : 0) : 0);
 }
 
-void cSatipConfig::SetCICAM(unsigned int indexP, int cicamP)
+cString cSatipConfig::GetCAIDList(unsigned int CamIndex) const
 {
-  if (indexP < ELEMENTS(cicamsM))
-     cicamsM[indexP] = cicamP;
+   cString caIdList = "";
+   if (CamIndex < MAX_CICAM_COUNT)
+      for (int i = 0; providedCAIds[CamIndex][i]; i++)
+         caIdList.Append(cString::sprintf("%s0x%04X", i > 0 ? ", " : "", providedCAIds[CamIndex][i]));
+
+   return caIdList;
+}
+
+void cSatipConfig::SetCAID(unsigned int camIndex, unsigned int CAIDIndex, int CAID)
+{
+  if (camIndex < MAX_CICAM_COUNT && CAIDIndex < MAX_CAID_COUNT)
+    providedCAIds[camIndex][CAIDIndex] = CAID;
+}
+
+
+int cSatipConfig::GetCIAssignedDevice(unsigned int indexP) const
+{
+  return (indexP < ELEMENTS(ciAssignedDevice)) ? ciAssignedDevice[indexP] : -1;
+}
+
+void cSatipConfig::SetCIAssignedDevice(unsigned int indexP, int DeviceIndex)
+{
+  if (indexP < ELEMENTS(ciAssignedDevice))
+     ciAssignedDevice[indexP] = DeviceIndex;
 }
 
 unsigned int cSatipConfig::GetDisabledSourcesCount(void) const

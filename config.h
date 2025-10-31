@@ -14,6 +14,7 @@
 class cSatipConfig
 {
 private:
+  unsigned int deviceCount;
   unsigned int operatingModeM;
   unsigned int traceModeM;
   unsigned int ciExtensionM;
@@ -27,7 +28,8 @@ private:
   bool disableServerQuirksM;
   bool disconnectIdleStreams;
   bool useSingleModelServersM;
-  int cicamsM[MAX_CICAM_COUNT];
+  int providedCAIds[MAX_CICAM_COUNT][MAX_CAID_COUNT + 1];  // zero terminated CA ID list!
+  int ciAssignedDevice[SATIP_MAX_DEVICES];   // list of devices with assigned num of CI
   int disabledSourcesM[MAX_DISABLED_SOURCES_COUNT];
   int disabledFiltersM[SECTION_FILTER_TABLE_SIZE];
   size_t rtpRcvBufSizeM;
@@ -67,6 +69,7 @@ public:
     eTraceModeMask    = 0xFFFF
   };
   cSatipConfig();
+  unsigned int GetDeviceCount(void) const { return deviceCount; }
   unsigned int GetOperatingMode(void) const { return operatingModeM; }
   bool IsOperatingModeOff(void) const { return (operatingModeM == eOperatingModeOff); }
   bool IsOperatingModeLow(void) const { return (operatingModeM == eOperatingModeLow); }
@@ -77,7 +80,11 @@ public:
   bool IsTraceMode(eTraceMode modeP) const { return (traceModeM & modeP); }
   unsigned int GetCIExtension(void) const { return ciExtensionM; }
   unsigned int GetFrontendReuse(void) const { return frontendReuseM; }
-  int GetCICAM(unsigned int indexP) const;
+  int GetCAID(unsigned int camIndex, unsigned int CAIDIndex) const;
+  const int *GetProvidedCAIds(unsigned int camIndex) const { return camIndex < MAX_CAID_COUNT ? providedCAIds[camIndex] : 0; };
+  cString GetCAIDList(unsigned int camIndex) const;
+  bool IsCAinList(unsigned int CAID) const;
+  int GetCIAssignedDevice(unsigned int indexP) const;
   unsigned int GetEITScan(void) const { return eitScanM; }
   unsigned int GetUseBytes(void) const { return useBytesM; }
   unsigned int GetTransportMode(void) const { return transportModeM; }
@@ -96,11 +103,13 @@ public:
   unsigned int GetPortRangeStop(void) const { return portRangeStopM; }
   size_t GetRtpRcvBufSize(void) const { return rtpRcvBufSizeM; }
 
+  void SetDeviceCount(unsigned int DeviceCount) { deviceCount = DeviceCount; }
   void SetOperatingMode(unsigned int operatingModeP) { operatingModeM = operatingModeP; }
   void SetTraceMode(unsigned int modeP) { traceModeM = (modeP & eTraceModeMask); }
   void SetCIExtension(unsigned int onOffP) { ciExtensionM = onOffP; }
   void SetFrontendReuse(unsigned int onOffP) { frontendReuseM = onOffP; }
-  void SetCICAM(unsigned int indexP, int cicamP);
+  void SetCAID(unsigned int camIndex, unsigned int CAIDIndex, int CAID);
+  void SetCIAssignedDevice(unsigned int indexP, int DeviceIndex);
   void SetEITScan(unsigned int onOffP) { eitScanM = onOffP; }
   void SetUseBytes(unsigned int onOffP) { useBytesM = onOffP; }
   void SetTransportMode(unsigned int transportModeP) { transportModeM = transportModeP; }
