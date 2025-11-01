@@ -1,11 +1,12 @@
 This is an SAT>IP plugin for the Video Disk Recorder (VDR).
 
-Written by:                  Rolf Ahrenberg
+
+Originally Written by:       Rolf Ahrenberg
                              < R o l f . A h r e n b e r g @ s c i . f i >
+Original Project's homepage: https://github.com/rofafor/vdr-plugin-satip
 
-Project's homepage:          https://github.com/rofafor/vdr-plugin-satip
-
-Latest version available at: https://github.com/rofafor/vdr-plugin-satip/releases
+Current maintainer:          <c h r i s t o p h 1 . h a u b r i c h @ a r c o r . d e>
+Project's homepage:          https://github.com/FireFlyVDR/vdr-plugin-satip
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License version 2 as
@@ -50,7 +51,7 @@ can be used to manually configure static SAT>IP servers if autodetection
 via UPnP somehow can't be used. Multiple service entries can be given
 separated by a semicolon:
 
-[<srcaddress>@]<ipaddress>[:<port>]|<model>[:<filter>]|<description>[:<quirk>];...
+--server=[<srcaddress>@]<ipaddress>[:<port>]|<model>[:<filter>]|<description>[:<quirk>];...
 
 - srcaddress (Optional)  Source address can be used to define used
                          networking interface on a host, e.g. 127.0.0.1.
@@ -96,7 +97,7 @@ separated by semicolon:
 
 Example for CA ID 0x1000 in slot 1 and 0x2000 and 0x2020 in slot 2:
 --caids=0x1000;0x2000,0x2020
-Additionally in the plugins settings you need enable the "Use CI extension" and
+Additionally in the plugin's settings you need enable the "Use CI extension" and
 define the VDR device(s) the CI slot(s)s will be attached to.
 
 SAT>IP satellite positions (aka. signal sources) shall be defined via
@@ -219,8 +220,3 @@ Notes:
   parameters:
   $ cat /proc/sys/net/core/rmem_default
   $ cat /proc/sys/net/core/rmem_max
-
-Acknowledgements:
-
-- Big thanks to Digital Devices GmbH for providing the Octopus Net
-  hardware for development!

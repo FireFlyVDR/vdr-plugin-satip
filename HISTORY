@@ -227,3 +227,32 @@ VDR Plugin 'satip' Revision History
 - Added timeout for HasLock (Thanks to Winfried Koehler).
 - Updated detectsatip script for Python 3.
 - Fixed keepalive interval.
+
+2025-11-01 Version 2.5.0
+
+- fix running out of devices resulting in black screen and transfer mode error messages
+- optimize section filtering logic by removing unused code
+- fix missing retune resulting in black screen
+- avoid empty and therefore useless requests to SATIP server
+- fix accepting stream ID zero
+- take over several fixes from wirbels satip repo
+- fix init of pTunerM and check of params
+- Do not lock timers longer than necessary
+- Detach if deviceId matches instead of transponder
+- Release server's tuners by opening RTSP connections only when needed
+- In force mode push also empty PID list onto SATIP server
+- Remove unused MainThreadHook
+- Fix memory leak in socket flush
+- cache RTSP base URL
+- clarify scope of mutexes by making them distinguishable
+- refactoring of frontend tracking to simplify assignment
+- make disconnect for idle streams configurable
+- changed tuner assignment messages to debug level
+- fixed attaching tuner after detach with no assignment
+- ignore case of M-SEARCH query results (from wirbels's repo)
+- Refactored CI handling of OctopusNet to work with its firmware 2.x
+- fix for newer compiler
+- optimize OctopusNet CI allocation
+- improve readability of debug log definitions
+- extend detectsatip.py to scan all local interfaces for SATIP servers
+- updated README
