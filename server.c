@@ -159,6 +159,7 @@ cSatipServer::cSatipServer(const char *srcAddressP, const char *addressP, const 
         quirkM |= eSatipQuirkForceLock;
      // These devices support the X_PMT protocol extension:
      if (strstr(*descriptionM, "OctopusNet") ||                // Digital Devices OctopusNet
+         strstr(*descriptionM, "octonet-pro") ||               // Digital Devices OctopusNet with Firmware 2.x
          strstr(*descriptionM, "minisatip")                    // minisatip server
         )
         quirkM |= eSatipQuirkCiXpmt;
@@ -197,6 +198,7 @@ cSatipServer::cSatipServer(const char *srcAddressP, const char *addressP, const 
   debug3("%s description=%s quirks=%s", __PRETTY_FUNCTION__, *descriptionM, *quirksM);
   // These devices support external CI
   if (strstr(*descriptionM, "OctopusNet") ||            // Digital Devices OctopusNet
+      strstr(*descriptionM, "octonet-pro") ||           // Digital Devices OctopusNet with Firmware 2.x
       strstr(*descriptionM, "minisatip") ||             // minisatip server
       strstr(*descriptionM, "DVBViewer")                // DVBViewer Media Server
      ) {
