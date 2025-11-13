@@ -21,8 +21,8 @@ Requirements:
 - PugiXML - Light-weight, simple and fast XML parser for C++
   http://pugixml.org/
   or
-  TinyXML - a simple, small, C++ XML parser
-  http://www.grinninglizard.com/tinyxml/
+  TinyXML2 - a simple, small, C++ XML parser
+  https://leethomason.github.io/tinyxml2/
 
 - Glibc >= 2.12 - the GNU C library (recvmmsg)
   http://www.gnu.org/software/libc/

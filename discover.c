@@ -6,8 +6,8 @@
  */
 
 #include <string.h>
-#ifdef USE_TINYXML
- #include <tinyxml.h>
+#ifdef USE_TINYXML2
+ #include <tinyxml2.h>
 #else
  #include <pugixml.hpp>
 #endif
@@ -250,14 +250,14 @@ void cSatipDiscover::ParseDeviceInfo(const char *addrP, const int portP)
 {
   debug1("%s (%s, %d)", __PRETTY_FUNCTION__, addrP, portP);
   const char *desc = NULL, *model = NULL;
-#ifdef USE_TINYXML
-  TiXmlDocument doc;
+#ifdef USE_TINYXML2
+  tinyxml2::XMLDocument doc;
   doc.Parse(dataBufferM.Data());
-  TiXmlHandle docHandle(&doc);
-  TiXmlElement *descElement = docHandle.FirstChild("root").FirstChild("device").FirstChild("friendlyName").ToElement();
+  tinyxml2::XMLHandle docHandle(&doc);
+  tinyxml2::XMLElement *descElement = docHandle.FirstChildElement("root").FirstChildElement("device").FirstChildElement("friendlyName").ToElement();
   if (descElement)
      desc = descElement->GetText() ? descElement->GetText() : "MyBrokenHardware";
-  TiXmlElement *modelElement = docHandle.FirstChild("root").FirstChild("device").FirstChild("satip:X_SATIPCAP").ToElement();
+  tinyxml2::XMLElement *modelElement = docHandle.FirstChildElement("root").FirstChildElement("device").FirstChildElement("satip:X_SATIPCAP").ToElement();
   if (modelElement)
      model = modelElement->GetText() ? modelElement->GetText() : "DVBS2-1";
 #else

@@ -2,9 +2,9 @@
 # Makefile for SAT>IP plugin
 #
 
-# Use TinyXML instead of PugiXML
+# Use TinyXML2 instead of PugiXML
 
-#SATIP_USE_TINYXML = 1
+#SATIP_USE_TINYXML2 = 1
 
 # The official name of this plugin.
 # This name will be used in the '-P...' option of VDR to load the plugin.
@@ -61,9 +61,9 @@ INCLUDES +=
 
 DEFINES += -DPLUGIN_NAME_I18N='"$(PLUGIN)"'
 
-ifdef SATIP_USE_TINYXML
-DEFINES += -DUSE_TINYXML
-LIBS += -ltinyxml
+ifdef SATIP_USE_TINYXML2
+DEFINES += -DUSE_TINYXML2
+LIBS += -ltinyxml2
 else
 LIBS += -lpugixml
 endif
