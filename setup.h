@@ -24,7 +24,6 @@ private:
   int ciExtensionM;
   int frontendReuseM;
   int ciAssignedDevice[SATIP_MAX_DEVICES];
-  const char *cicamTextsM[CA_SYSTEMS_TABLE_SIZE];
   int eitScanM;
   int numDisabledSourcesM;
   int disabledSourcesM[MAX_DISABLED_SOURCES_COUNT];
