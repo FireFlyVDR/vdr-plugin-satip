@@ -34,7 +34,6 @@
 
 #define MAX_CICAM_COUNT                  4
 #define MAX_CAID_COUNT                   4
-#define CA_SYSTEMS_TABLE_SIZE            47
 
 #define SATIP_CURL_EASY_GETINFO(X, Y, Z) \
   if ((res = curl_easy_getinfo((X), (Y), (Z))) != CURLE_OK) { \
@@ -155,9 +154,6 @@ struct ca_systems_table_type {
   int end;
   const char *description;
 };
-
-extern const ca_systems_table_type ca_systems_table[CA_SYSTEMS_TABLE_SIZE];
-extern bool checkCASystem(unsigned int cicamP, int caidP);
 
 extern const char VERSION[];
 
