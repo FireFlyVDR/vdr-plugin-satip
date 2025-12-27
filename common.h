@@ -66,22 +66,22 @@
 
 #define ERROR_IF(exp, errstr) ERROR_IF_FUNC(exp, errstr, , );
 
-#define DELETE_POINTER(ptr)      \
-  do {                           \
-     if (ptr) {                  \
-        typeof(*ptr) *tmp = ptr; \
-        ptr = NULL;              \
-        delete(tmp);             \
-        }                        \
+#define DELETE_POINTER(ptr)          \
+  do {                               \
+     if (ptr) {                      \
+        __typeof__(*ptr) *tmp = ptr; \
+        ptr = NULL;                  \
+        delete(tmp);                 \
+        }                            \
   } while (0)
 
-#define FREE_POINTER(ptr)        \
-  do {                           \
-     if (ptr) {                  \
-        typeof(*ptr) *tmp = ptr; \
-        ptr = NULL;              \
-        free(tmp);               \
-        }                        \
+#define FREE_POINTER(ptr)            \
+  do {                               \
+     if (ptr) {                      \
+        __typeof__(*ptr) *tmp = ptr; \
+        ptr = NULL;                  \
+        free(tmp);                   \
+        }                            \
   } while (0)
 
 #define ELEMENTS(x) (sizeof(x) / sizeof(x[0]))
