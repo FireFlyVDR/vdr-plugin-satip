@@ -227,6 +227,21 @@ void cSatipMenuDeviceStatus::Display(void)
 
 eOSState cSatipMenuDeviceStatus::ProcessKey(eKeys keyP)
 {
+  switch (int(keyP)) {
+    case kUp|k_Repeat:
+    case kUp:
+    case kDown|k_Repeat:
+    case kDown:
+    case kLeft|k_Repeat:
+    case kLeft:
+    case kRight|k_Repeat:
+    case kRight:
+                  DisplayMenu()->Scroll(NORMALKEY(keyP) == kUp || NORMALKEY(keyP) == kLeft, NORMALKEY(keyP) == kLeft || NORMALKEY(keyP) == kRight);
+                  cStatus::MsgOsdTextItem(NULL, NORMALKEY(keyP) == kUp || NORMALKEY(keyP) == kLeft);
+                  return osContinue;
+    default: break;
+    }
+
   eOSState state = cOsdMenu::ProcessKey(keyP);
 
   if (state == osUnknown) {
