@@ -211,15 +211,3 @@ msgstr "Aktive SAT>IP Server:"
 
 msgid "Help"
 msgstr "Hilfe"
-
-#~ msgid "CI/CAM"
-#~ msgstr "CI/CAM"
-
-#~ msgid ""
-#~ "Define a desired CAM type for the CI slot.\n"
-#~ "\n"
-#~ "The '---' option lets SAT>IP hardware do the auto-selection."
-#~ msgstr ""
-#~ "Bestimmt welcher CI Einschub für ein CAM genutzt werden soll.\n"
-#~ "\n"
-#~ "Die Option '---' überlässt der SAT>IP Hardware die automatische Auswahl."

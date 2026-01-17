@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: vdr-satip 2.4.0\n"
 "Report-Msgid-Bugs-To: <see README>\n"
-"POT-Creation-Date: 2019-10-27 19:12+0200\n"
+"POT-Creation-Date: 2025-11-13 11:12+0100\n"
 "PO-Revision-Date:  2019-10-27 10:27+0200\n"
 "Last-Translator: Gabriel Bonich <gbonich@gmail.com>\n"
 "Language-Team: Spanish <vdr@linuxtv.org>\n"
@@ -127,17 +127,21 @@ msgstr ""
 "\n"
 "Esto permite la configuración CI/CAM integrado que se encuentra en algunos equipos SAT>IP (ej. Digital Devices OctopusNet)."
 
-msgid "CI/CAM"
-msgstr "CI/CAM"
-
-msgid ""
-"Define a desired CAM type for the CI slot.\n"
-"\n"
-"The '---' option lets SAT>IP hardware do the auto-selection."
+#, c-format
+msgid "  VDR Device #%d assigned CI/CAM"
 msgstr ""
-"Definir el tipo de CAM para la ranura CI.\n"
-"\n"
-"La opción '---' permite al equipo SAT>IP hacer la selección automática."
+
+msgid "none"
+msgstr "no"
+
+msgid "Define which CI/CAM is assigned to which VDR device"
+msgstr ""
+
+msgid "supported CA IDs of CI/CAM"
+msgstr ""
+
+msgid "Show the CA IDs this CI/CAM is able to handle as defined in the plugin parameters"
+msgstr ""
 
 msgid "Enable EPG scanning"
 msgstr "Activa Escaneo EPG"
@@ -153,9 +157,6 @@ msgstr ""
 
 msgid "Disabled sources"
 msgstr "Desactiva fuentes"
-
-msgid "none"
-msgstr "no"
 
 msgid ""
 "Define number of sources to be disabled.\n"
