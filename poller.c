@@ -78,7 +78,7 @@ void cSatipPoller::Action(void)
   SetPriority(-1);
   // Do the thread loop
   while (Running()) {
-        int nfds = epoll_wait(fdM, events, eMaxFileDescriptors, -1);
+        int nfds = epoll_wait(fdM, events, eMaxFileDescriptors, 1000);
         ERROR_IF_FUNC((nfds == -1 && errno != EINTR), "epoll_wait() failed", break, ;);
         for (int i = 0; i < nfds; ++i) {
             cSatipPollerIf* poll = reinterpret_cast<cSatipPollerIf *>(events[i].data.ptr);
