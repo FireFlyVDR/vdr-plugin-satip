@@ -35,6 +35,7 @@ private:
   uint16_t pidM;
   uint8_t tidM;
   uint8_t maskM;
+  bool suspended;
 
   cRingBufferFrame *ringBufferM;
   int deviceIndexM;
@@ -51,7 +52,7 @@ public:
   cSatipSectionFilter(int deviceIndexP, uint16_t pidP, uint8_t tidP, uint8_t maskP);
   virtual ~cSatipSectionFilter();
   void Process(const uint8_t* dataP);
-  void Send(void);
+  void Send(bool PollHUP);
   int GetFd(void) { return socketM[0]; }
   uint16_t GetPid(void) const { return pidM; }
   int Available(void) const;

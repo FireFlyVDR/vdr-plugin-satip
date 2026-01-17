@@ -20,6 +20,7 @@ cSatipSectionFilter::cSatipSectionFilter(int deviceIndexP, uint16_t pidP, uint8_
   pidM(pidP),
   tidM(tidP),
   maskM(maskP),
+  suspended(false),
   ringBufferM(new cRingBufferFrame(eDmxMaxSectionCount * eDmxMaxSectionSize)),
   deviceIndexM(deviceIndexP)
 {
@@ -180,22 +181,33 @@ void cSatipSectionFilter::Process(const uint8_t* dataP)
      }
 }
 
-void cSatipSectionFilter::Send(void)
+void cSatipSectionFilter::Send(bool PollHUP)
 {
-  cFrame *section = ringBufferM->Get();
-  if (section) {
-     uchar *data = section->Data();
-     int count = section->Count();
-     if (data && (count > 0) && (socketM[1] >= 0) && (socketM[0] >= 0)) {
-        if (send(socketM[1], data, count, MSG_EOR) > 0) {
-           // Update statistics
-           AddSectionStatistic(count, 1);
-           }
-        else if (errno != EAGAIN)
-          error("failed to send section data (%i bytes) [device=%d]", count, deviceIndexM);
-        }
-     ringBufferM->Drop(section);
-     }
+   cFrame *section = ringBufferM->Get();
+   if (section) {
+      if (!suspended) {
+         if (PollHUP) {
+            error("failed to send section data: Received POLL(RD)HUP [device=%d]", deviceIndexM);
+            suspended = true;
+         }
+         else {
+            uchar *data = section->Data();
+            int count = section->Count();
+            if (data && (count > 0) && (socketM[1] >= 0) && (socketM[0] >= 0)) {
+               int sent;
+               if ((sent = send(socketM[1], data, count, MSG_EOR)) >= 0) {
+                  // Update statistics
+                  AddSectionStatistic(sent, 1);
+               }
+            }
+            else if (errno != EAGAIN) {
+                suspended = true;
+                error("failed to send section data (%i bytes, errno=%d) [device=%d]", count, errno, deviceIndexM);
+            }
+         }
+      }
+      ringBufferM->Drop(section);
+   }
 }
 
 int cSatipSectionFilter::Available(void) const
@@ -218,11 +230,10 @@ cSatipSectionFilterHandler::cSatipSectionFilterHandler(int deviceIndexP, unsigne
   if (ringBufferM) {
      ringBufferM->SetTimeouts(100, 100);
      ringBufferM->SetIoThrottle();
+     Start();
      }
   else
      error("Failed to allocate buffer for section filter handler [device=%d]", deviceIndexM);
-
-  Start();
 }
 
 cSatipSectionFilterHandler::~cSatipSectionFilterHandler()
@@ -253,7 +264,7 @@ void cSatipSectionFilterHandler::SendAll(void)
      for (unsigned int i = 0; i < eMaxSecFilterCount; ++i) {
          if (filtersM[i] && filtersM[i]->Available() != 0) {
             pollFdsM[i].fd = filtersM[i]->GetFd();
-            pollFdsM[i].events = POLLOUT;
+            pollFdsM[i].events = POLLOUT | POLLRDHUP;
             pendingData = true;
             }
          else
@@ -267,7 +278,7 @@ void cSatipSectionFilterHandler::SendAll(void)
      // send data (if available)
      for (unsigned int i = 0; i < eMaxSecFilterCount && pendingData; ++i) {
          if (pollFdsM[i].revents & POLLOUT)
-            filtersM[i]->Send();
+            filtersM[i]->Send((pollFdsM[i].revents & (POLLRDHUP | POLLHUP)) > 0);
          }
   } while (pendingData);
 }
