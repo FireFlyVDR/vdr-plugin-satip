@@ -121,7 +121,7 @@ void cSatipTuner::Action(void)
           case tsSet:
                debug4("%s: tsSet [device %d]", __PRETTY_FUNCTION__, deviceIdM);
                if (needsReconnect ||  currentServerM.IsQuirk(cSatipServer::eSatipQuirkTearAndPlay)) {
-                  Disconnect();
+                  Disconnect(false);
                   needsReconnect = false;
                }
                if (Connect()) {
@@ -130,7 +130,7 @@ void cSatipTuner::Action(void)
                   UpdatePids(true);
                   }
                else
-                  Disconnect();
+                  Disconnect(false);
                break;
           case tsTuned:
                debug4("%s: tsTuned [device %d]", __PRETTY_FUNCTION__, deviceIdM);
@@ -270,7 +270,7 @@ bool cSatipTuner::Connect(void)
   return false;
 }
 
-bool cSatipTuner::Disconnect(void)
+bool cSatipTuner::Disconnect(bool Detach)
 {
   cMutexLock MutexLock(&mutexTunerM);
   debug9("%s stream=%d [device %d]", __PRETTY_FUNCTION__, streamIdM, deviceIdM);
@@ -295,7 +295,8 @@ bool cSatipTuner::Disconnect(void)
   signalQualityM = -1;
   frontendIdM = -1;
 
-  currentServerM.Detach();
+  if (Detach)
+     currentServerM.Detach();
   statusUpdateM.Set(0);
   timeoutM = eMinKeepAliveIntervalMs - eKeepAlivePreBufferMs;
   addPidsM.Clear();

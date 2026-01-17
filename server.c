@@ -64,10 +64,11 @@ bool cSatipFrontends::Attach(int deviceIdP)
          devicesAttached[i] = true;
          devicesAssigned[i] = deviceIdP;
          debug9("%s %s-%u attached unassigned, deviceID list:     %s [device %u]", __PRETTY_FUNCTION__, *type, numDevices, *DeviceIDList(), deviceIdP);
+         info("%s %s-%u attached unassigned, deviceID list:     %s [device %u]", __PRETTY_FUNCTION__, *type, numDevices, *DeviceIDList(), deviceIdP);
          return true;
       }
    }
-   esyslog("%s %s-%u NOT attached, deviceID list: %s [device %u]", __PRETTY_FUNCTION__, *type, numDevices, *DeviceIDList(), deviceIdP);
+   error("%s %s-%u NOT attached, deviceID list: %s [device %u]", __PRETTY_FUNCTION__, *type, numDevices, *DeviceIDList(), deviceIdP);
    return false;
 }
 

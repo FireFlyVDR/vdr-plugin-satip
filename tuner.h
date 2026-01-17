@@ -135,7 +135,7 @@ private:
   bool needsReconnect;
 
   bool Connect(void);
-  bool Disconnect(void);
+  bool Disconnect(bool Detach = true);
   bool Receive(void);
   bool KeepAlive(bool forceP = false);
   bool ReadReceptionStatus(bool forceP = false);
