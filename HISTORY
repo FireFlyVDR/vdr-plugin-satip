@@ -256,3 +256,16 @@ VDR Plugin 'satip' Revision History
 - improve readability of debug log definitions
 - extend detectsatip.py to scan all local interfaces for SATIP servers
 - updated README
+
+2026-01-18 Version 2.5.1
+- detect OctopusNet with newer firmware (octonet-pro)
+- replace outdated tinyXML with its successor tinyXML2
+- remove unused code
+- make retuning an info message (suggested by kfb77 @vdr-portal.de)
+- set C++ standard to c++17
+- add ability to scroll in device status screen
+- adapted po files to current version (suggested by kfb77 @vdr-portal.de)
+- Sectionfilter now stops sending data on file descriptors if an error occured (reported by kfb77 @vdr-portal.de)
+- Poller now times out after 1000ms to avoid killing on shutdown (suggested by kfb77 @vdr-portal.de)
+- avoid detaching tuner from frontend tracking in case of retuning
+- limit debug messages of tuner state to state changes
