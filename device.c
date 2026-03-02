@@ -146,13 +146,13 @@ cString cSatipDevice::GetGeneralInformation(void)
 {
   debug16("%s [device %u]", __PRETTY_FUNCTION__, deviceIndexM);
   LOCK_CHANNELS_READ;
-  return cString::sprintf("SAT>IP device: %d\nCardIndex: %d\nStream: %s\nSignal: %s\nStream bitrate: %s\n%sChannel: %s\n",
+  return cString::sprintf("SAT>IP device: %d\nCardIndex: %d\nStream: %s\nSignal: %s\nStream bitrate: %s\n%slast tuned Channel: %s\n",
                           deviceIndexM, CardIndex(),
                           pTunerM ? *pTunerM->GetInformation() : "",
                           pTunerM ? *pTunerM->GetSignalStatus() : "",
                           pTunerM ? *pTunerM->GetTunerStatistic() : "",
                           *GetBufferStatistic(),
-                          *Channels->GetByNumber(cDevice::CurrentChannel())->ToText());
+                          channelM.GetChannelID() == tChannelID::InvalidID ? "none" : *channelM.ToText());
 }
 
 cString cSatipDevice::GetPidsInformation(void)
