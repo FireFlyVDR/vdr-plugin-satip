@@ -106,24 +106,20 @@ void cSatipTuner::Action(void)
   cTimeMs idleCheck(eIdleCheckTimeoutMs);
   cTimeMs tuning(eTuningTimeoutMs);
   reConnectM.Set(eConnectTimeoutMs);
-  eTunerState lastState = tsIdle;
   // Do the thread loop
   while (Running()) {
-        UpdateCurrentState();
+        bool stateChanged = UpdateCurrentState();
         switch (currentStateM) {
           case tsIdle:
-               if (currentStateM != lastState)
-                  debug4("%s: tsIdle [device %d]", __PRETTY_FUNCTION__, deviceIdM);
+               if (stateChanged) debug4("%s: tsIdle [device %d]", __PRETTY_FUNCTION__, deviceIdM);
                break;
           case tsRelease:
-               if (currentStateM != lastState)
-                  debug4("%s: tsRelease [device %d]", __PRETTY_FUNCTION__, deviceIdM);
+               if (stateChanged) debug4("%s: tsRelease [device %d]", __PRETTY_FUNCTION__, deviceIdM);
                Disconnect();
                RequestState(tsIdle, smInternal);
                break;
           case tsSet:
-               if (currentStateM != lastState)
-                  debug4("%s: tsSet [device %d]", __PRETTY_FUNCTION__, deviceIdM);
+               if (stateChanged) debug4("%s: tsSet [device %d]", __PRETTY_FUNCTION__, deviceIdM);
                if (needsReconnect ||  currentServerM.IsQuirk(cSatipServer::eSatipQuirkTearAndPlay)) {
                   Disconnect(false);
                   needsReconnect = false;
@@ -137,8 +133,7 @@ void cSatipTuner::Action(void)
                   Disconnect(false);
                break;
           case tsTuned:
-               if (currentStateM != lastState)
-                  debug4("%s: tsTuned [device %d]", __PRETTY_FUNCTION__, deviceIdM);
+               if (stateChanged) debug4("%s: tsTuned [device %d]", __PRETTY_FUNCTION__, deviceIdM);
                deviceM->SetChannelTuned();
                reConnectM.Set(eConnectTimeoutMs);
                idleCheck.Set(eIdleCheckTimeoutMs);
@@ -161,8 +156,7 @@ void cSatipTuner::Action(void)
                   }
                break;
           case tsLocked:
-               if (currentStateM != lastState)
-                  debug4("%s: tsLocked [device %d]", __PRETTY_FUNCTION__, deviceIdM);
+               if (stateChanged) debug4("%s: tsLocked [device %d]", __PRETTY_FUNCTION__, deviceIdM);
                if (!UpdatePids()) {
                   error("Pid update failed - retuning [device %d]", deviceIdM);
                   RequestState(tsSet, smInternal);
@@ -194,7 +188,6 @@ void cSatipTuner::Action(void)
                error("Unknown tuner status %d [device %d]", currentStateM, deviceIdM);
                break;
           }
-        lastState = currentStateM;
         if (!StateRequested())
            sleepM.Wait(eSleepTimeoutMs); // to avoid busy loop and reduce cpu load
         }
@@ -652,7 +645,7 @@ bool cSatipTuner::ReadReceptionStatus(bool forceP)
   return false;
 }
 
-void cSatipTuner::UpdateCurrentState(void)
+bool cSatipTuner::UpdateCurrentState(void)
 {
   debug16("%s [device %d]", __PRETTY_FUNCTION__, deviceIdM);
   cMutexLock MutexLock(&mutexTunerM);
@@ -670,7 +663,9 @@ void cSatipTuner::UpdateCurrentState(void)
   if (currentStateM != state) {
      debug1("%s: Switching from %s to %s [device %d]", __PRETTY_FUNCTION__, TunerStateString(currentStateM), TunerStateString(state), deviceIdM);
      currentStateM = state;
+     return true;
      }
+  return false;
 }
 
 bool cSatipTuner::StateRequested(void)

@@ -140,7 +140,7 @@ private:
   bool KeepAlive(bool forceP = false);
   bool ReadReceptionStatus(bool forceP = false);
   bool UpdatePids(bool forceP = false);
-  void UpdateCurrentState(void);
+  bool UpdateCurrentState(void);
   bool StateRequested(void);
   bool RequestState(eTunerState stateP, eStateMode modeP);
   const char *StateModeString(eStateMode modeP);
