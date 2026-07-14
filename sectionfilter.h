@@ -67,7 +67,7 @@ private:
   cRingBufferLinear *ringBufferM;
   cMutex mutexSecFilterHandlerM;
   int deviceIndexM;
-  cSatipSectionFilter *filtersM[eMaxSecFilterCount];
+  cSatipSectionFilter *sectionFiltersM[eMaxSecFilterCount];
   struct pollfd pollFdsM[eMaxSecFilterCount];
 
   bool Delete(unsigned int indexP);

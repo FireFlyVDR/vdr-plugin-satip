@@ -224,7 +224,7 @@ cSatipSectionFilterHandler::cSatipSectionFilterHandler(int deviceIndexP, unsigne
   debug1("%s (%d, %d) [device %d]", __PRETTY_FUNCTION__, deviceIndexM, bufferLenP, deviceIndexM);
 
   // Initialize filter pointers
-  memset(filtersM, 0, sizeof(filtersM));
+  memset(sectionFiltersM, 0, sizeof(sectionFiltersM));
 
   // Create input buffer
   if (ringBufferM) {
@@ -262,8 +262,8 @@ void cSatipSectionFilterHandler::SendAll(void)
 
      // assemble all handlers to poll (use -1 to ignore handlers)
      for (unsigned int i = 0; i < eMaxSecFilterCount; ++i) {
-         if (filtersM[i] && filtersM[i]->Available() != 0) {
-            pollFdsM[i].fd = filtersM[i]->GetFd();
+         if (sectionFiltersM[i] && sectionFiltersM[i]->Available() != 0) {
+            pollFdsM[i].fd = sectionFiltersM[i]->GetFd();
             pollFdsM[i].events = POLLOUT | POLLRDHUP;
             pendingData = true;
             }
@@ -278,7 +278,7 @@ void cSatipSectionFilterHandler::SendAll(void)
      // send data (if available)
      for (unsigned int i = 0; i < eMaxSecFilterCount && pendingData; ++i) {
          if (pollFdsM[i].revents & POLLOUT)
-            filtersM[i]->Send((pollFdsM[i].revents & (POLLRDHUP | POLLHUP)) > 0);
+            sectionFiltersM[i]->Send((pollFdsM[i].revents & (POLLRDHUP | POLLHUP)) > 0);
          }
   } while (pendingData);
 }
@@ -307,8 +307,8 @@ void cSatipSectionFilterHandler::Action(void)
                     // Process TS packet through all filters
                     mutexSecFilterHandlerM.Lock();
                     for (unsigned int i = 0; i < eMaxSecFilterCount; ++i) {
-                        if (filtersM[i])
-                           filtersM[i]->Process(p);
+                        if (sectionFiltersM[i])
+                           sectionFiltersM[i]->Process(p);
                         }
                     mutexSecFilterHandlerM.Unlock();
                     ringBufferM->Del(TS_SIZE);
@@ -329,10 +329,10 @@ cString cSatipSectionFilterHandler::GetInformation(void)
   cString s = "";
   unsigned int count = 0;
   for (unsigned int i = 0; i < eMaxSecFilterCount; ++i) {
-      if (filtersM[i]) {
+      if (sectionFiltersM[i]) {
          s = cString::sprintf("%sFilter %d: %s Pid=0x%02X (%s)\n", *s, i,
-                              *filtersM[i]->GetSectionStatistic(), filtersM[i]->GetPid(),
-                              id_pid(filtersM[i]->GetPid()));
+                              *sectionFiltersM[i]->GetSectionStatistic(), sectionFiltersM[i]->GetPid(),
+                              id_pid(sectionFiltersM[i]->GetPid()));
          if (++count > SATIP_STATS_ACTIVE_FILTERS_COUNT)
             break;
          }
@@ -345,7 +345,7 @@ bool cSatipSectionFilterHandler::Exists(u_short pidP)
   debug16("%s (%d) [device %d]", __PRETTY_FUNCTION__, pidP, deviceIndexM);
   cMutexLock MutexLock(&mutexSecFilterHandlerM);
   for (unsigned int i = 0; i < eMaxSecFilterCount; ++i) {
-      if (filtersM[i] && (pidP == filtersM[i]->GetPid())) {
+      if (sectionFiltersM[i] && (pidP == sectionFiltersM[i]->GetPid())) {
          debug12("%s (%d) Found [device %d]", __PRETTY_FUNCTION__, pidP, deviceIndexM);
          return true;
          }
@@ -356,10 +356,10 @@ bool cSatipSectionFilterHandler::Exists(u_short pidP)
 bool cSatipSectionFilterHandler::Delete(unsigned int indexP)
 {
   debug16("%s (%d) [device %d]", __PRETTY_FUNCTION__, indexP, deviceIndexM);
-  if ((indexP < eMaxSecFilterCount) && filtersM[indexP]) {
+  if ((indexP < eMaxSecFilterCount) && sectionFiltersM[indexP]) {
      debug8("%s (%d) Found [device %d]", __PRETTY_FUNCTION__, indexP, deviceIndexM);
-     cSatipSectionFilter *tmp = filtersM[indexP];
-     filtersM[indexP] = NULL;
+     cSatipSectionFilter *tmp = sectionFiltersM[indexP];
+     sectionFiltersM[indexP] = NULL;
      delete tmp;
      return true;
      }
@@ -391,10 +391,10 @@ int cSatipSectionFilterHandler::Open(u_short pidP, u_char tidP, u_char maskP)
      return -1;
   // Search the next free filter slot
   for (unsigned int i = 0; i < eMaxSecFilterCount; ++i) {
-      if (!filtersM[i]) {
-         filtersM[i] = new cSatipSectionFilter(deviceIndexM, pidP, tidP, maskP);
-         debug16("%s (%d, %02X, %02X) handle=%d index=%u [device %d]", __PRETTY_FUNCTION__, pidP, tidP, maskP, filtersM[i]->GetFd(), i, deviceIndexM);
-         return filtersM[i]->GetFd();
+      if (!sectionFiltersM[i]) {
+         sectionFiltersM[i] = new cSatipSectionFilter(deviceIndexM, pidP, tidP, maskP);
+         debug16("%s (%d, %02X, %02X) handle=%d index=%u [device %d]", __PRETTY_FUNCTION__, pidP, tidP, maskP, sectionFiltersM[i]->GetFd(), i, deviceIndexM);
+         return sectionFiltersM[i]->GetFd();
          }
       }
   // No free filter slot found
@@ -406,8 +406,8 @@ void cSatipSectionFilterHandler::Close(int handleP)
   cMutexLock MutexLock(&mutexSecFilterHandlerM);
   // Search the filter for deletion
   for (unsigned int i = 0; i < eMaxSecFilterCount; ++i) {
-      if (filtersM[i] && (handleP == filtersM[i]->GetFd())) {
-         debug8("%s (%d) pid=%d index=%u [device %d]", __PRETTY_FUNCTION__, handleP, filtersM[i]->GetPid(), i, deviceIndexM);
+      if (sectionFiltersM[i] && (handleP == sectionFiltersM[i]->GetFd())) {
+         debug8("%s (%d) pid=%d index=%u [device %d]", __PRETTY_FUNCTION__, handleP, sectionFiltersM[i]->GetPid(), i, deviceIndexM);
          Delete(i);
          break;
          }
@@ -419,9 +419,9 @@ int cSatipSectionFilterHandler::GetPid(int handleP)
   cMutexLock MutexLock(&mutexSecFilterHandlerM);
   // Search the filter for data
   for (unsigned int i = 0; i < eMaxSecFilterCount; ++i) {
-      if (filtersM[i] && (handleP == filtersM[i]->GetFd())) {
-         debug8("%s (%d) pid=%d index=%u [device %d]", __PRETTY_FUNCTION__, handleP, filtersM[i]->GetPid(), i, deviceIndexM);
-         return filtersM[i]->GetPid();
+      if (sectionFiltersM[i] && (handleP == sectionFiltersM[i]->GetFd())) {
+         debug8("%s (%d) pid=%d index=%u [device %d]", __PRETTY_FUNCTION__, handleP, sectionFiltersM[i]->GetPid(), i, deviceIndexM);
+         return sectionFiltersM[i]->GetPid();
          }
       }
   return -1;
