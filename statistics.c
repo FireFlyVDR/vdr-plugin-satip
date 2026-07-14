@@ -78,7 +78,7 @@ cString cSatipPidStatistics::GetPidStatistic()
   const int numberOfElements = sizeof(mostActivePidsM) / sizeof(pidStruct);
   uint64_t elapsed = timerM.Elapsed(); /* in milliseconds */
   timerM.Set();
-  cString s("Active pids:\n");
+  cString s = cString::sprintf("Most active PIDs (up to %u):\n", numberOfElements);
   for (int i = 0; i < numberOfElements; ++i) {
       if (mostActivePidsM[i].pid >= 0) {
          long bitrate = elapsed ? (long)(1000.0L * mostActivePidsM[i].dataAmount / KILOBYTE(1) / elapsed) : 0L;
