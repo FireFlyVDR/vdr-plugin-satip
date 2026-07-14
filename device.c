@@ -386,8 +386,17 @@ bool cSatipDevice::MaySwitchTransponder(const cChannel *channelP) const
 }
 
 void cSatipDevice::SetPowerSaveMode(bool On)
-{
+{ ///< Puts the device into power save mode, if applicable.
+  ///< If On is true, power save mode shall be activated,
+  ///< if it is false, normal operating mode shall be restored.
+  //   Do not restore normal mode here because the new cChannel is not yet known
   debug9("%s (%s) [device %u]", __PRETTY_FUNCTION__, On?"On":"Off", deviceIndexM);
+  if (On && SatipConfig.DisconnectIdleStreams() && pTunerM != NULL) {
+     cMutexLock MutexLock(&mutexDevicesS);
+     pTunerM->Release();
+     channelM = cChannel();
+     tsBufferM->Clear();
+  }
 }
 
 bool cSatipDevice::SetChannelDevice(const cChannel *channelP, bool liveViewP)

@@ -87,7 +87,6 @@ private:
     eStatusUpdateTimeoutMs    = 1000,  // in milliseconds
     ePidUpdateIntervalMs      = 250,   // in milliseconds
     eConnectTimeoutMs         = 5000,  // in milliseconds
-    eIdleCheckTimeoutMs       = 15000, // in milliseconds
     eTuningTimeoutMs          = 20000, // in milliseconds
     eMinKeepAliveIntervalMs   = 30000, // in milliseconds
     eKeepAlivePreBufferMs     = 2000,  // in milliseconds
@@ -161,6 +160,7 @@ public:
   cString GetPmtPidList() { return pmtPids.ListPids(); }
   bool Open(void);
   bool Close(void);
+  void Release(void);
   int FrontendId(void);
   int SignalStrength(void);
   double SignalStrengthDBm(void);

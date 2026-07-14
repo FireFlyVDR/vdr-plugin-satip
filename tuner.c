@@ -102,8 +102,6 @@ void cSatipTuner::Action(void)
 {
   debug1("%s Entering [device %d]", __PRETTY_FUNCTION__, deviceIdM);
 
-  bool lastIdleStatus = false;
-  cTimeMs idleCheck(eIdleCheckTimeoutMs);
   cTimeMs tuning(eTuningTimeoutMs);
   reConnectM.Set(eConnectTimeoutMs);
   // Do the thread loop
@@ -120,7 +118,7 @@ void cSatipTuner::Action(void)
                break;
           case tsSet:
                if (stateChanged) debug4("%s: tsSet [device %d]", __PRETTY_FUNCTION__, deviceIdM);
-               if (needsReconnect ||  currentServerM.IsQuirk(cSatipServer::eSatipQuirkTearAndPlay)) {
+               if (needsReconnect || currentServerM.IsQuirk(cSatipServer::eSatipQuirkTearAndPlay)) {
                   Disconnect(false);
                   needsReconnect = false;
                }
@@ -136,8 +134,6 @@ void cSatipTuner::Action(void)
                if (stateChanged) debug4("%s: tsTuned [device %d]", __PRETTY_FUNCTION__, deviceIdM);
                deviceM->SetChannelTuned();
                reConnectM.Set(eConnectTimeoutMs);
-               idleCheck.Set(eIdleCheckTimeoutMs);
-               lastIdleStatus = false;
                // Read reception statistics via DESCRIBE and RTCP
                if (hasLockM || ReadReceptionStatus()) {
                   // Quirk for devices without valid reception data
@@ -172,16 +168,6 @@ void cSatipTuner::Action(void)
                   RequestState(tsSet, smInternal);
                   break;
                   }
-               if (idleCheck.TimedOut()) {
-                  bool currentIdleStatus = deviceM->IsIdle();
-                  if (lastIdleStatus && currentIdleStatus) {
-                     info("Idle timeout - releasing [device %d]", deviceIdM);
-                     RequestState(tsRelease, smInternal);
-                     }
-                  lastIdleStatus = currentIdleStatus;
-                  idleCheck.Set(eIdleCheckTimeoutMs);
-                  break;
-                  }
                Receive();
                break;
           default:
@@ -214,6 +200,14 @@ bool cSatipTuner::Close(void)
 
   // return always true
   return true;
+}
+
+void cSatipTuner::Release(void)
+{
+  cMutexLock MutexLock(&mutexTunerM);
+  debug1("%s [device %d]", __PRETTY_FUNCTION__, deviceIdM);
+
+  RequestState(tsRelease, smExternal);
 }
 
 bool cSatipTuner::Connect(void)
@@ -650,18 +644,22 @@ bool cSatipTuner::UpdateCurrentState(void)
   debug16("%s [device %d]", __PRETTY_FUNCTION__, deviceIdM);
   cMutexLock MutexLock(&mutexTunerM);
   eTunerState state = currentStateM;
+  bool internal;
 
   if (internalStateM.Size()) {
      state = internalStateM.At(0);
      internalStateM.Remove(0);
+     internal = true;
      }
   else if (externalStateM.Size()) {
-     state = externalStateM.At(0);
+     if (currentStateM != tsIdle || externalStateM.At(0) != tsRelease) // ignore tsIdle -> tsRelease
+        state = externalStateM.At(0);
      externalStateM.Remove(0);
+     internal = false;
      }
 
   if (currentStateM != state) {
-     debug1("%s: Switching from %s to %s [device %d]", __PRETTY_FUNCTION__, TunerStateString(currentStateM), TunerStateString(state), deviceIdM);
+     debug1("%s: Switching from %s to %s(%s) [device %d]", __PRETTY_FUNCTION__, TunerStateString(currentStateM), TunerStateString(state), internal ? "internal" : "external", deviceIdM);
      currentStateM = state;
      return true;
      }
