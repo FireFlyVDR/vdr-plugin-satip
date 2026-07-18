@@ -269,3 +269,13 @@ VDR Plugin 'satip' Revision History
 - Poller now times out after 1000ms to avoid killing on shutdown (suggested by kfb77 @vdr-portal.de)
 - avoid detaching tuner from frontend tracking in case of retuning
 - limit debug messages of tuner state to state changes
+
+2026-07-18 Version 2.5.2
+- fixed wrong channel name in svdrp info (displays now last channel tuned to of that transponder)
+- optimize debug messages of tuner state changes
+- clarify PID statistics
+- rename section filters filtersM to sectionFiltersM
+- implemented cDevice::SetPowerSaveMode() which replaces internal detection of power save mode
+- raised required VDR version to 2.6.8 to support SetPowerSaveMode()
+- re-arranged options handling and comments, enhanced commandline help
+- updated README with more detailed descriptions and SVDRP commands
