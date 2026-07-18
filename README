@@ -13,8 +13,16 @@ it under the terms of the GNU General Public License version 2 as
 published by the Free Software Foundation.
 See the file COPYING for more information.
 
-Requirements:
+Description:
+------------
+This plugin integrates SAT>IP network devices seamlessly into VDR.
+You can use any SAT>IP channel like any other normal DVB channel for
+live viewing, recording, etc. The plugin also features full section
+filtering capabilities which allow for example EIT information to be
+extracted from the incoming stream.
 
+Requirements:
+-------------
 - Libcurl >= 7.36.0 - the multiprotocol file transfer library with RTSP support
   http://curl.haxx.se/libcurl/
 
@@ -27,81 +35,112 @@ Requirements:
 - Glibc >= 2.12 - the GNU C library (recvmmsg)
   http://www.gnu.org/software/libc/
 
-Description:
+- VDR >= 2.6.8
 
-This plugin integrates SAT>IP network devices seamlessly into VDR.
-You can use any SAT>IP channel like any other normal DVB channel for
-live viewing, recording, etc. The plugin also features full section
-filtering capabilities which allow for example EIT information to be
-extracted from the incoming stream.
 
 Installation:
-
-tar -xzf /put/your/path/here/vdr-satip-X.Y.Z.tgz
-make -C satip-X.Y.Z install
+-------------
+tar -xzf /put/your/path/here/vdr-plugin-satip-X.Y.Z.tgz
+make -C vdr-plugin-satip-X.Y.Z install
 
 Configuration:
+--------------
 
-The plugin accepts a "--devices" (-d) command-line parameter defaulting
-to two. This parameter defines how many simultaneous transponders can
-be received, if there are available SAT>IP tuners.
+Command line parameters:
+------------------------
+  -d NUM,   --devices=NUM  Define how many VDR devices are created by the plugin and
+                           therefore how many transponders can be received simultaneously
+                           (default: 2)
 
-The plugin accepts also a "--server" (-s) command-line parameter, that
-can be used to manually configure static SAT>IP servers if autodetection
-via UPnP somehow can't be used. Multiple service entries can be given
-separated by a semicolon:
+  -s SERVER[;SERVER ....], --server=SERVER[;SERVER ....]
+                           Manually configure one or more static SAT>IP server(s) if autodetection
+                           via UPnP can't be used or is not desired
+                           Multiple SERVER definitions can be given separated by a semicolon.
 
---server=[<srcaddress>@]<ipaddress>[:<port>]|<model>[:<filter>]|<description>[:<quirk>];...
+                           The SERVER definition has the following format:
+                           [<srcaddress>@]<ipaddress>[:<port>]|<model>[:<filter>]|<description>[:<quirk>]
 
-- srcaddress (Optional)  Source address can be used to define used
-                         networking interface on a host, e.g. 127.0.0.1.
-- ipaddress              IP address of SAT>IP server, e.g. 127.0.0.1.
-- port (Optional)        IP port number of SAT>IP server, e.g 443.
-- model                  Model defines DVB modulation system (DVBS2,
-                         DVBT2, DVBT, DVBC) and number of available
-                         frontends separated by a hyphen, e.g. DVBT2-4.
-- filter (Optional)      Filter can be used to limit satellite frontends
-                         to certain satellite position, e.g. S19.2E.
-- description            Friendly name of SAT>IP server. This is used
-                         for autodetection of quirks.
-- quirk (Optional)       Quirks are non-standard compliant features and
-                         bug fixes of SAT>IP server  defined by a
-                         hexadecimal number. Multiple quirks can be
-                         defined by combining values by addition:
+          <srcaddress> (optional)   Source address can be utilized to define the
+                                    networking interface on the host to use, e.g. 127.0.0.1
 
-                           0x01: Fix session id bug
-                           0x02: Fix play parameter (addpids/delpids) bug
-                           0x04: Fix frontend locking bug
-                           0x08: Support for RTP over TCP
-                           0x10: Support the X_PMT protocol extension
-                           0x20: Support the CI TNR protocol extension
-                           0x40: Fix auto-detection of pilot tones bug
-                           0x80: Fix re-tuning bug by teardowning a session
+          <ipaddress>               IP address of the SAT>IP server, e.g. 127.0.0.1
 
-Examples:
+          <port>  (optional)        IP port number for RTSP of the SAT>IP server (default: 554)
 
-vdr -P 'satip -s 192.168.0.1|DVBS2-2,DVBT2-2|OctopusNet'
-vdr -P 'satip -s 192.168.0.1|DVBS2-4|OctopusNet;192.168.0.2|DVBT2-4|minisatip:0x18'
-vdr -P 'satip -s 192.168.0.1:554|DVBS2-2:S19.2E|OctopusNet;192.168.0.2:8554|DVBS2-4:S19.2E,S1W|minisatip'
+          <model>                   Model defines the DVB delivery system (DVBS2,
+                                    DVBT2, DVBT, DVBC) and number of frontends,
+                                    separated by a hyphen, e.g. DVBS2-4;
+                                    multiple models can be given separated by comma,
+                                    e.g. DVBS2-4,DVBC-2
 
-The plugin accepts a "--portrange" (-p) command-line parameter, that can
-be used to manually specify the RTP & RTCP port range and therefore
-enables using the plugin through a NAT (e.g. Docker bridged network).
-A minimum of 2 ports per device is required.
+          <filter> (optional)       Filter can be used to limit satellite frontends
+                                    to a certain satellite position, e.g. S19.2E;
+                                    multiple filters can be given separated by comma,
+                                    e.g. S19.2E,S13E
 
-If you want to use the CI slot(s) of the OctopusNet you need to define
-the CA IDs supported by each slot with the "--caids" parameter. Multiple
-CA IDs per slot can be given separated by comma, multiple slots are
-separated by semicolon:
---caids=<CAM1_ID1>[,<CAM1_ID2,...][;<CAM2_ID1>[,<CAM2_ID2>,...];....]
+          <description>             Friendly name of SAT>IP server; this is used
+                                    for autodetection of quirks
 
-Example for CA ID 0x1000 in slot 1 and 0x2000 and 0x2020 in slot 2:
---caids=0x1000;0x2000,0x2020
-Additionally in the plugin's settings you need enable the "Use CI extension" and
-define the VDR device(s) the CI slot(s)s will be attached to.
+          <quirk> (optional)        Quirks are non-standard compliant features and
+                                    workarounds for SAT>IP server defined by a
+                                    hexadecimal number; multiple quirks can be
+                                    defined by adding the values:
 
+                                      0x01: Fix session ID bug
+                                      0x02: Fix play parameter (addpids/delpids) bug
+                                      0x04: Fix frontend locking bug
+                                      0x08: Support for RTP over TCP
+                                      0x10: Support the X_PMT protocol extension
+                                      0x20: Support the CI TNR protocol extension
+                                      0x40: Fix auto-detection of pilot tones bug
+                                      0x80: Fix re-tuning bug by teardowning a session
+
+          Examples:
+            vdr -P 'satip -s 192.168.0.1|DVBS2-2,DVBT2-2|OctopusNet'
+            vdr -P 'satip -s 192.168.0.1|DVBS2-4|OctopusNet;192.168.0.2|DVBT2-4|minisatip:0x18'
+            vdr -P 'satip -s 192.168.0.1:554|DVBS2-2:S19.2E|OctopusNet;192.168.0.2:8554|DVBS2-4:S19.2E,S1W|minisatip'
+
+  -c CA_IDS, --caids=CA_IDS
+                           To use the CI slot(s) of the OctopusNet define the CA IDs
+                           supported by each CI slot; multiple CA IDs per slot can be given
+                           separated by comma, multiple slots are separated by semicolon;
+                           the CA_IDS are proivided in the following format:
+                           <CAM1_ID1>[,<CAM1_ID2,...][;<CAM2_ID1>[,<CAM2_ID2>,...];....]
+
+                           Example: CA ID 0x1000 in slot 1, CA IDs 0x2000 and 0x2020 in slot 2:
+                           --caids=0x1000;0x2000,0x2020
+
+                           Additionally in the plugin's settings you need to enable the
+                           "Use CI extension" and define the VDR device(s) the CI slot(s)
+                           will be attached to; Up to 4 CAMs are supported
+
+  -p START-END, --portrange=START-END
+                           Specify manually the RTP & RTCP port range by START and END which
+                           enables using the plugin through NAT (e.g. Docker bridged network);
+                           a minimum of 2 ports per device is required
+
+  -D,       --detach       start the plugin in detached mode; this disables
+                           all devices which can be anabled later with the SVDRP ATTA command
+
+  -S,       --single       enable the single model server mode;
+                           this creates multiple logical SAT>IP servers when used
+                           with multiple models (delivery systems) in the SERVER parameter
+
+  -n,       --noquirks     disable autodetection of server quirks
+
+  -N,       --nodisconnect disable disconnecting idle streams from the SAT>IP server;
+                           this can be used to keep a connection and therefore "reserve"
+                           a frontend on the SAT>IP server for the SATIP plugin
+
+  -t MODE,  --trace=MODE   set the tracing mode MODE; see log.h in the source code for details
+
+  -r SIZE,  --rcvbuf=SIZE  override the size of the RTP receive buffer with SIZE in bytes
+
+
+Special Configurations:
+-----------------------
 SAT>IP satellite positions (aka. signal sources) shall be defined via
-sources.conf. If the source description begins with a number, it's used
+VDR's sources.conf. If the source description begins with a number, it's used
 as SAT>IP signal source selection parameter. A special number zero can
 be used to disable the source. Otherwise, the default parameter is one:
 
@@ -122,66 +161,112 @@ identifier number in RID field of a channels.conf entry:
 FE = RID % 100
 Valid range: 1 ... 99
 
-Setup menu:
 
-- Operating mode = off            If you want exclude all SAT>IP devices
-                   low            from VDR's device handling, set this
-                   normal         option to "off". Otherwise, if you want
-                   high           to keep SAT>IP at a low priority when
-                                  selecting available devices, set this
-                                  option to "low". Similarly, the "high"
-                                  value prefers the SAT>IP over the local
-                                  DVB cards when selecting available devices.
-- Use CI extension = no           If you want to use the CI extension found
-                                  in some SAT>IP hardware (e.g. Digital
-                                  Devices OctopusNet), set this option to
-                                  "yes".
--  VDR Device # assigned CI/CAM   if "Use CI extension" is enabled you need to
-                                  assign here a CI/CAM to a VDR Device
--   supported CA IDs of CI/CAM #  readonly, displays the configured CA IDs of
-                                  the CI slot above if an CI/CAM is assinged
-- Enable EPG scanning = yes       If you want exclude all SAT>IP devices
-                                  from VDR's EIT background scanning, set
-                                  this option to "no".
-- Disabled sources = none         If your SAT>IP servers don't have certain
-                                  satellite positions available you can
-                                  disable them via this option.
-- Disabled filters = none         Certain section filters might cause some
-                                  unwanted behaviour to VDR such as time
-                                  being falsely synchronized etc. This option
-                                  allows creation of blacklists of ill-behaving
-                                  filters. If this option is set to a non-zero
-                                  value, the menu page will contain that many
-                                  "Disable filter" options which allow you
-                                  to disable the individual section filters.
-                                  Valid range: "none" = 0 ... 7
-- Transport mode = unicast        If you want to use the non-standard
-                   multicast      RTP-over-TCP transport mode, set this option
-                   rtp-o-tcp      accordingly. Otherwise, the transport
-                                  mode will be RTP-over-UDP via unicast or
-                                  multicast.
-- Enable frontend reuse = yes     Certain devices might have artifacts if
-                                  multiple channels are assigned to the same
-                                  frontend. If you want to avoid such a
-                                  frontend assignment, set this option to "no".
-                                  For receiving multiple channels of one
-                                  transponder with one CI/CAM you need to set
-                                  this option to "yes".
-- [Red:Scan]                      Forces network scanning of SAT>IP hardware.
-- [Yellow:Devices]                Opens SAT>IP device status menu.
-- [Blue:Info]                     Opens SAT>IP information/statistics menu.
-- [Ok]                            Opens information menu of selected SAT>IP
-                                  device.
+Setup menu:
+-----------
+  - Operating mode = low            Selects the priority of SAT>IP devices:
+                                      off:    exclude all SAT>IP devices from VDR's device handling
+                                              which means no SAT>IP devices will be used
+                                      low:    prefer other available devices like local DVB cards
+                                      normal: SAT>IP devices have same priority than other devices
+                                      hight:  prefer SAT>IP devices over other available devices
+
+  - Use CI extension = no           If you want to use the CI extension found
+                                    in some SAT>IP hardware (e.g. Digital
+                                    Devices OctopusNet), set this option to "yes".
+
+  -  VDR Device # assigned CI/CAM   if "Use CI extension" is enabled you need to
+                                    assign here a CI/CAM to a VDR Device
+
+  -   supported CA IDs of CI/CAM #  readonly, displays the configured CA IDs of
+                                    the CI slot above if a CI/CAM is assinged
+
+  - Enable EPG scanning = yes       If you want exclude all SAT>IP devices
+                                    from VDR's EIT background scanning for EPG
+                                    set this option to "no".
+
+  - Disabled sources = none         If your SAT>IP servers don't have certain
+                                    satellite positions available you can
+                                    disable them via this option. If this option
+                                    is set to a non-zero value, the menu page will
+                                    contain that many "Disabled sources" options
+                                    which allow you to disable the individual sources
+                                    Valid range: 0 (= "none") ... 25
+
+  - Disabled filters = none         Certain section filters might cause some
+                                    unwanted behaviour to VDR such as time
+                                    being falsely synchronized. This option
+                                    allows creation of blacklists of ill-behaving
+                                    filters. If this option is set to a non-zero
+                                    value, the menu page will contain that many
+                                    "Disable filters" options which allow you
+                                    to disable the individual section filters.
+                                    Valid range: 0 (= "none") ... 5
+
+  - Transport mode = unicast        If you want to use the non-standard
+                     multicast      RTP-over-TCP transport mode, set this option
+                     rtp-o-tcp      accordingly. Otherwise, the transport
+                                    mode will be RTP-over-UDP via unicast or
+                                    multicast.
+
+  - Enable frontend reuse = yes     Certain devices might have artifacts if
+                                    multiple channels are assigned to the same
+                                    frontend. If you want to avoid such a
+                                    frontend assignment, set this option to "no".
+                                    For receiving multiple channels of one
+                                    transponder with one CI/CAM you need to set
+                                    this option to "yes".
+  Buttons:
+  - [Red Button:Scan]               Forces network scanning of SAT>IP hardware.
+  - [Yellow Button:Devices]         Opens SAT>IP device status menu.
+  - [Blue Button:Info]              Opens SAT>IP information/statistics menu.
+  - [Ok]                            Opens information menu of selected SAT>IP
+                                    device.
 
 Information menu:
+  Buttons:
+  - [Red Button:General]            Opens the general information page.
+  - [Green Button:Pids]             Opens the pid statistics page.
+  - [Yellow Button:Filters]         Opens the section filter statistics page.
+  - [Blue Button:Bits/bytes]        Toggles between bits and bytes mode.
 
-- [Red:General]                  Opens the general information page.
-- [Green:Pids]                   Opens the pid statistics page.
-- [Yellow:Filters]               Opens the section filter statistics page.
-- [Blue:Bits/bytes]              Toggles between bits and bytes mode.
+
+SVDRP commands:
+---------------
+The plugin provides several SVDRP commands which can be executed
+e.g. by "svdrpsend PLUG satip <command> [<parameters>]"
+
+  INFO [ <page> ] [ <card index> ]
+          Prints SAT>IP device information and statistics
+          The output can be narrowed using the  "page" option:
+            1 = general
+            2 = pids
+            3 = section filters
+
+  MODE    Toggles between bit or byte information mode
+
+  LIST    Lists active SAT>IP servers
+
+  SCAN    Scans active SAT>IP servers
+
+  STAT    Lists status information of SAT>IP devices
+
+  CONT    Shows SAT>IP device count
+
+  OPER [ off | low | normal | high ]
+          Get or set operating mode of SAT>IP devices
+
+  ATTA    Attach active SAT>IP servers
+
+  DETA    Detachs active SAT>IP servers
+
+  TRAC [ <mode> ]
+          Get or set tracing mode flags
+          See log.h in the source code for details
+
 
 Notes:
-
+------
 - If you are having problems receiving DVB-S2 channels, make sure your
   channels.conf entry contains correct pilot tone setting.
 
@@ -198,7 +283,7 @@ Notes:
 - Tracing can be set on/off dynamically via command-line switch or
   SVDRP command.
 
-- For OctopusNet firmware version 2.0 or greater recommended.
+- For OctopusNet firmware version 2.0 or greater is recommended.
 
 - Inverto OEM firmware 1.17.0.120 or greater recommended.
   The firmware 1.16.0.120 can be downloaded and installed
