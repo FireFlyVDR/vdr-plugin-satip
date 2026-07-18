@@ -66,76 +66,86 @@ public:
 cPluginSatip::cPluginSatip(void)
 : deviceCountM(2),
   serversM(NULL)
-{
-  debug16("%s", __PRETTY_FUNCTION__);
-  // Initialize any member variables here.
+{ // Initialize any member variables here.
   // DON'T DO ANYTHING ELSE THAT MAY HAVE SIDE EFFECTS, REQUIRE GLOBAL
   // VDR OBJECTS TO EXIST OR PRODUCE ANY OUTPUT!
+  debug16("%s", __PRETTY_FUNCTION__);
 }
 
 cPluginSatip::~cPluginSatip()
-{
+{ // Clean up after yourself!
   debug16("%s", __PRETTY_FUNCTION__);
-  // Clean up after yourself!
 }
 
 const char *cPluginSatip::CommandLineHelp(void)
 {
   debug1("%s", __PRETTY_FUNCTION__);
   // Return a string that describes all known command line options.
-  return "  -d <num>, --devices=<number>  set number of devices to be created\n"
-         "  -t <mode>, --trace=<mode>     set the tracing mode\n"
-         "  -s <ipaddr>|<model>|<desc>, --server=[<srcaddress>@]<ipaddress>[:<port>]|<model>[:<filter>]|<description>[:<quirk>];...\n"
-         "                                define hard-coded SAT>IP server(s)\n\n"
-         "                                srcaddress (Optional)  Source address can be used to define used\n"
-         "                                                       networking interface on a host, e.g. 127.0.0.1.\n"
-         "                                ipaddress              IP address of SAT>IP server, e.g. 127.0.0.1.\n"
-         "                                port (Optional)        IP port number of SAT>IP server, e.g 443.\n"
-         "                                model                  Model defines DVB modulation system (DVBS2,\n"
-         "                                                       DVBT2, DVBT, DVBC) and number of available\n"
-         "                                                       frontends separated by a hyphen, e.g. DVBT2-4.\n"
-         "                                filter (Optional)      Filter can be used to limit satellite frontends\n"
-         "                                                       to certain satellite position, e.g. S19.2E.\n"
-         "                                description            Friendly name of SAT>IP server. This is used\n"
-         "                                                       for autodetection of quirks.\n"
-         "                                quirk (Optional)       Quirks are non-standard compliant features and\n"
-         "                                                       bug fixes of SAT>IP server  defined by a\n"
-         "                                                       hexadecimal number. Multiple quirks can be\n"
-         "                                                       defined by combining values by addition:\n\n"
-         "                                                       0x01: Fix session id bug\n"
-         "                                                       0x02: Fix play parameter (addpids/delpids) bug\n"
-         "                                                       0x04: Fix frontend locking bug\n"
-         "                                                       0x08: Support for RTP over TCP\n"
-         "                                                       0x10: Support the X_PMT protocol extension\n"
-         "                                                       0x20: Support the CI TNR protocol extension\n"
-         "                                                       0x40: Fix auto-detection of pilot tones bug\n"
-         "                                                       0x80: Fix re-tuning bug by teardowning a session\n"
-         "  -c, --caids=<CAM1_ID1>[,<CAM1_ID2,...][;<CAM2_ID1>[,<CAM2_ID2>,...]]\n"
-         "                                set the CAIDs of up to 4 CAMs\n"
-         "  -D, --detach                  set the detached mode on\n"
-         "  -S, --single                  set the single model server mode on\n"
-         "  -n, --noquirks                disable autodetection of the server quirks\n"
-         "  -N, --nodisconnect            disable disconnect for idle streams\n"
-         "  -p, --portrange=<start>-<end> set a range of ports used for the RT[C]P server\n"
-         "                                a minimum of 2 ports per device is required.\n"
-         "  -r, --rcvbuf                  override the size of the RTP receive buffer in bytes\n";
+  return "  -d NUM,   --devices=NUM  number of VDR devices to be created (default: 2)\n"
+         "  -s SERVER[;SERVER ....], --server=SERVER[;SERVER ....]\n"
+         "                           define one or more hard-coded SAT>IP servers (disables autodetection)\n"
+         "                           where SERVER has the following format:\n"
+         "                           [<srcaddress>@]<ipaddress>[:<port>]|<model>[:<filter>]|<description>[:<quirk>]\n"
+         "                             srcaddress (optional)  Source address can be utilzed to define the\n"
+         "                                                    networking interface on the host to use, e.g. 127.0.0.1\n"
+         "                             ipaddress              IP address of the SAT>IP server, e.g. 127.0.0.1\n"
+         "                             port (optional)        IP port number for RTSP of the SAT>IP server (default: 554)\n"
+         "                             model                  Model defines the DVB delivery system (DVBS2,\n"
+         "                                                    DVBT2, DVBT, DVBC) and number of frontends\n"
+         "                                                    separated by a hyphen, e.g. DVBS2-4;\n"
+         "                                                    multiple models can be given separated by comma,\n"
+         "                                                    e.g. DVBS2-4,DVBC-2\n"
+         "                             filter (optional)      Filter can be used to limit satellite frontends\n"
+         "                                                    to a certain satellite position, e.g. S19.2E;\n"
+         "                                                    multiple filters can be given separated by comma,\n"
+         "                                                    e.g. S19.2E,S13E\n"
+         "                             description            Friendly name of SAT>IP server; this is used\n"
+         "                                                    for autodetection of quirks\n"
+         "                             quirk (optional)       Quirks are non-standard compliant features and\n"
+         "                                                    workarounds for SAT>IP server defined by a\n"
+         "                                                    hexadecimal number; multiple quirks can be\n"
+         "                                                    defined by adding the values:\n"
+         "                                                      0x01: Fix session ID bug\n"
+         "                                                      0x02: Fix play parameter (addpids/delpids) bug\n"
+         "                                                      0x04: Fix frontend locking bug\n"
+         "                                                      0x08: Support for RTP over TCP\n"
+         "                                                      0x10: Support the X_PMT protocol extension\n"
+         "                                                      0x20: Support the CI TNR protocol extension\n"
+         "                                                      0x40: Fix auto-detection of pilot tones bug\n"
+         "                                                      0x80: Fix re-tuning bug by teardowning a session\n"
+         "  -c CA_IDS, --caids=CA_IDS\n"
+         "                           To use up to 4 CI slot(s) of the OctopusNet define the CA IDs\n"
+         "                           supported by each CI slot; multiple CA IDs per slot can be given\n"
+         "                           separated by comma, multiple slots are separated by semicolon;\n"
+         "                           the CA_IDS are proivided in the following format:\n"
+         "                           <CAM1_ID1>[,<CAM1_ID2,...][;<CAM2_ID1>[,<CAM2_ID2>,...];....]\n"
+         "                           See also the README\n"
+         "  -p START-END, --portrange=START-END\n"
+         "                           Specify manually the RTP & RTCP port range by START and END which\n"
+         "                           enables using the plugin through NAT (e.g. Docker bridged network);\n"
+         "                           a minimum of 2 ports per device is required\n"
+         "  -D,       --detach       start plugin in detached mode\n"
+         "  -S,       --single       enable the single model server mode\n"
+         "  -n,       --noquirks     disable autodetection of server quirks\n"
+         "  -N,       --nodisconnect disable disconnecting idle streams from the SAT>IP server\n"
+         "  -t MODE,  --trace=MODE   set the tracing mode MODE\n"
+         "  -r SIZE,  --rcvbuf=SIZE  override the size of the RTP receive buffer with SIZE in bytes\n";
 }
 
 bool cPluginSatip::ProcessArgs(int argc, char *argv[])
-{
+{ // Implement command line argument processing here if applicable.
   debug1("%s", __PRETTY_FUNCTION__);
-  // Implement command line argument processing here if applicable.
   static const struct option long_options[] = {
     { "devices",      required_argument, NULL, 'd' },
-    { "trace",        required_argument, NULL, 't' },
     { "server",       required_argument, NULL, 's' },
-    { "caids",    required_argument, NULL, 'c' },
+    { "caids",        required_argument, NULL, 'c' },
     { "portrange",    required_argument, NULL, 'p' },
-    { "rcvbuf",       required_argument, NULL, 'r' },
     { "detach",       no_argument,       NULL, 'D' },
     { "single",       no_argument,       NULL, 'S' },
     { "noquirks",     no_argument,       NULL, 'n' },
     { "nodisconnect", no_argument,       NULL, 'N' },
+    { "trace",        required_argument, NULL, 't' },
+    { "rcvbuf",       required_argument, NULL, 'r' },
     { NULL,           no_argument,       NULL,  0  }
     };
 
@@ -143,19 +153,19 @@ bool cPluginSatip::ProcessArgs(int argc, char *argv[])
   cString caids;
   cString portrange;
   int c;
-  while ((c = getopt_long(argc, argv, "d:t:s:p:r:DSn", long_options, NULL)) != -1) {
+  while ((c = getopt_long(argc, argv, "d:s:c:p:DSnNt:r:", long_options, NULL)) != -1) {
     switch (c) {
       case 'd':
            deviceCountM = strtol(optarg, NULL, 0);
-           break;
-      case 't':
-           SatipConfig.SetTraceMode(strtol(optarg, NULL, 0));
            break;
       case 's':
            server = optarg;
            break;
       case 'c':
            caids = optarg;
+           break;
+      case 'p':
+           portrange = optarg;
            break;
       case 'D':
            SatipConfig.SetDetachedMode(true);
@@ -169,8 +179,8 @@ bool cPluginSatip::ProcessArgs(int argc, char *argv[])
       case 'N':
            SatipConfig.SetDisconnectIdleStreams(false);
            break;
-      case 'p':
-           portrange = optarg;
+      case 't':
+           SatipConfig.SetTraceMode(strtol(optarg, NULL, 0));
            break;
       case 'r':
            SatipConfig.SetRtpRcvBufSize(strtol(optarg, NULL, 0));
@@ -190,9 +200,8 @@ bool cPluginSatip::ProcessArgs(int argc, char *argv[])
 }
 
 bool cPluginSatip::Initialize(void)
-{
+{ // Initialize any background activities the plugin shall perform.
   debug1("%s", __PRETTY_FUNCTION__);
-  // Initialize any background activities the plugin shall perform.
   if (curl_global_init(CURL_GLOBAL_ALL) != CURLE_OK)
      error("Unable to initialize CURL");
   cSatipPoller::GetInstance()->Initialize();
@@ -201,9 +210,8 @@ bool cPluginSatip::Initialize(void)
 }
 
 bool cPluginSatip::Start(void)
-{
+{ // Start any background activities the plugin shall perform.
   debug1("%s", __PRETTY_FUNCTION__);
-  // Start any background activities the plugin shall perform.
   curl_version_info_data *data = curl_version_info(CURLVERSION_NOW);
   cString info = cString::sprintf("Using CURL %s", data->version);
   for (int i = 0; data->protocols[i]; ++i) {
@@ -216,9 +224,8 @@ bool cPluginSatip::Start(void)
 }
 
 void cPluginSatip::Stop(void)
-{
+{ // Stop any background activities the plugin is performing.
   debug1("%s", __PRETTY_FUNCTION__);
-  // Stop any background activities the plugin is performing.
   cSatipDevice::Shutdown();
   cSatipDiscover::GetInstance()->Destroy();
   cSatipPoller::GetInstance()->Destroy();
@@ -226,36 +233,31 @@ void cPluginSatip::Stop(void)
 }
 
 void cPluginSatip::Housekeeping(void)
-{
+{ // Perform any cleanup or other regular tasks.
   debug16("%s", __PRETTY_FUNCTION__);
-  // Perform any cleanup or other regular tasks.
 }
 
 cString cPluginSatip::Active(void)
-{
+{ // Return a message string if shutdown should be postponed
   debug16("%s", __PRETTY_FUNCTION__);
-  // Return a message string if shutdown should be postponed
   return NULL;
 }
 
 time_t cPluginSatip::WakeupTime(void)
-{
+{ // Return custom wakeup time for shutdown script
   debug16("%s", __PRETTY_FUNCTION__);
-  // Return custom wakeup time for shutdown script
   return 0;
 }
 
 cOsdObject *cPluginSatip::MainMenuAction(void)
-{
+{ // Perform the action when selected from the main VDR menu.
   debug16("%s", __PRETTY_FUNCTION__);
-  // Perform the action when selected from the main VDR menu.
   return NULL;
 }
 
 cMenuSetupPage *cPluginSatip::SetupMenu(void)
-{
+{ // Return a setup menu in case the plugin supports one.
   debug1("%s", __PRETTY_FUNCTION__);
-  // Return a setup menu in case the plugin supports one.
   return new cSatipPluginSetup();
 }
 
@@ -440,9 +442,8 @@ int cPluginSatip::ParseFilters(const char *valueP, int *filtersP)
 }
 
 bool cPluginSatip::SetupParse(const char *nameP, const char *valueP)
-{
+{ // Parse your own setup parameters and store their values.
   debug1("%s", __PRETTY_FUNCTION__);
-  // Parse your own setup parameters and store their values.
   if (!strcasecmp(nameP, "OperatingMode"))
      SatipConfig.SetOperatingMode(atoi(valueP));
   else if (!strcasecmp(nameP, "EnableCIExtension"))
@@ -492,7 +493,7 @@ bool cPluginSatip::Service(const char *idP, void *dataP)
 }
 
 const char **cPluginSatip::SVDRPHelpPages(void)
-{
+{ // Return help text for SVDRP commands this plugin implements
   debug1("%s", __PRETTY_FUNCTION__);
   static const char *HelpPages[] = {
     "INFO [ <page> ] [ <card index> ]\n"
@@ -523,7 +524,7 @@ const char **cPluginSatip::SVDRPHelpPages(void)
 }
 
 cString cPluginSatip::SVDRPCommand(const char *commandP, const char *optionP, int &replyCodeP)
-{
+{ // Process SVDRP commands
   debug1("%s (%s, %s,)", __PRETTY_FUNCTION__, commandP, optionP);
   if (strcasecmp(commandP, "INFO") == 0) {
      int index = cDevice::ActualDevice()->CardIndex();
