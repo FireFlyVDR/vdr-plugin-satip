@@ -17,7 +17,8 @@ private:
   enum {
     eRtpPacketReadCount = 50,
     eMaxUdpPacketSizeB  = TS_SIZE * 7 + 12,
-    eReportIntervalS    = 300 // in seconds
+    eReportIntervalS    = 300, // in seconds
+    eResyncWindowMs     = 3000 // RTP sequence may restart after (re)tuning
   };
   cSatipTunerIf &tunerM;
   unsigned int bufferLenM;
@@ -25,12 +26,14 @@ private:
   time_t lastErrorReportM;
   int packetErrorsM;
   int sequenceNumberM;
+  cTimeMs resyncTimeoutM;
   int GetHeaderLength(unsigned char *bufferP, unsigned int lengthP);
 
 public:
   explicit cSatipRtp(cSatipTunerIf &tunerP);
   virtual ~cSatipRtp();
   virtual void Close(void);
+  void Resync(void);
 
   // for internal poller interface
 public:
