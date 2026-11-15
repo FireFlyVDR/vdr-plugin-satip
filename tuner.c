@@ -227,6 +227,7 @@ bool cSatipTuner::Connect(void)
         cString uri = cString::sprintf("%sstream=%d?%s", *baseURL, streamIdM, *streamParamM);
         debug9("%s Retuning, PLAY '%s' [device %d]", __PRETTY_FUNCTION__, *uri, deviceIdM);
         debug4("%s Retuning, PLAY '%s' [device %d]", __PRETTY_FUNCTION__, *uri, deviceIdM);
+        rtpM.Resync();
         if (rtspM.Play(*uri)) {
            keepAliveM.Set(timeoutM);
            lastParamM = streamParamM;
@@ -243,6 +244,7 @@ bool cSatipTuner::Connect(void)
            debug1("%s Requesting TCP [device %d]", __PRETTY_FUNCTION__, deviceIdM);
         debug9("%s SETUP '%s' [device %d]", __PRETTY_FUNCTION__,*uri, deviceIdM);
         debug4("%s SETUP '%s' [device %d]", __PRETTY_FUNCTION__,*uri, deviceIdM);
+        rtpM.Resync();
         if (rtspM.Setup(*uri, rtpM.Port(), rtcpM.Port(), useTcp)) {
            lastParamM = streamParamM;
            keepAliveM.Set(timeoutM);

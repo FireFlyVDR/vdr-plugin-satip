@@ -52,6 +52,14 @@ void cSatipRtp::Close(void)
      }
 }
 
+void cSatipRtp::Resync(void)
+{
+  debug1("%s [device %d]", __PRETTY_FUNCTION__, tunerM.GetId());
+  // A new stream (SETUP) or a retune (PLAY with new parameters) may restart
+  // the RTP sequence numbering, which is not a packet loss.
+  resyncTimeoutM.Set(eResyncWindowMs);
+}
+
 int cSatipRtp::GetHeaderLength(unsigned char *bufferP, unsigned int lengthP)
 {
   debug16("%s (, %d) [device %d]", __PRETTY_FUNCTION__, lengthP, tunerM.GetId());
@@ -79,11 +87,16 @@ int cSatipRtp::GetHeaderLength(unsigned char *bufferP, unsigned int lengthP)
         if ((((sequenceNumberM + 1) % 0xFFFF) == 0) && (seq == 0xFFFF))
            sequenceNumberM = -1;
         else if ((sequenceNumberM >= 0) && (((sequenceNumberM + 1) % 0xFFFF) != seq)) {
-           packetErrorsM++;
-           if (time(NULL) - lastErrorReportM > eReportIntervalS) {
-              info("Detected %d RTP packet error%s [device %d]", packetErrorsM, packetErrorsM == 1 ? "": "s", tunerM.GetId());
-              packetErrorsM = 0;
-              lastErrorReportM = time(NULL);
+           if (!resyncTimeoutM.TimedOut())
+              debug7("%s (%d) Ignoring RTP sequence jump %d -> %d after tuning [device %d]",
+                     __PRETTY_FUNCTION__, lengthP, sequenceNumberM, seq, tunerM.GetId());
+           else {
+              packetErrorsM++;
+              if (time(NULL) - lastErrorReportM > eReportIntervalS) {
+                 info("Detected %d RTP packet error%s [device %d]", packetErrorsM, packetErrorsM == 1 ? "": "s", tunerM.GetId());
+                 packetErrorsM = 0;
+                 lastErrorReportM = time(NULL);
+                 }
               }
            sequenceNumberM = seq;
            }
